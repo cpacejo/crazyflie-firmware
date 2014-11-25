@@ -45,7 +45,6 @@ void pidInit(PidObject* pid, const float desired, const float kp,
   pid->ki = ki;
   pid->kd = kd;
   pid->iLimit    = DEFAULT_PID_INTEGRATION_LIMIT;
-  pid->iLimitLow = -DEFAULT_PID_INTEGRATION_LIMIT;
   pid->dt        = dt;
 }
 
@@ -61,9 +60,9 @@ void pidUpdate(PidObject* pid, const float measured, const bool updateError)
     {
         pid->integ = pid->iLimit;
     }
-    else if (pid->integ < pid->iLimitLow)
+    else if (pid->integ < -pid->iLimit)
     {
-        pid->integ = pid->iLimitLow;
+        pid->integ = -pid->iLimit;
     }
 
     pid->deriv = (pid->error - pid->prevError) / pid->dt;
@@ -84,10 +83,6 @@ void pidSetIntegralLimit(PidObject* pid, const float limit) {
     pid->iLimit = limit;
 }
 
-
-void pidSetIntegralLimitLow(PidObject* pid, const float limitLow) {
-    pid->iLimitLow = limitLow;
-}
 
 void pidReset(PidObject* pid)
 {

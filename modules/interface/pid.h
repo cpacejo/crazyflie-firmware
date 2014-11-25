@@ -79,7 +79,6 @@ typedef struct
   float outI;         //< integral output (debugging)
   float outD;         //< derivative output (debugging)
   float iLimit;       //< integral limit
-  float iLimitLow;    //< integral limit
   float dt;           //< delta-time dt
 } PidObject;
 
