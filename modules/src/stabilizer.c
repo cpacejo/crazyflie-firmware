@@ -125,10 +125,10 @@ int16_t  actuatorRoll;
 int16_t  actuatorPitch;
 int16_t  actuatorYaw;
 
-uint32_t motorPowerM4;
-uint32_t motorPowerM2;
-uint32_t motorPowerM1;
-uint32_t motorPowerM3;
+int32_t motorPowerM1;
+int32_t motorPowerM2;
+int32_t motorPowerM3;
+int32_t motorPowerM4;
 
 static bool isInit;
 
@@ -397,6 +397,7 @@ static void distributePower(const uint16_t thrust, const int16_t roll,
                             const int16_t pitch, const int16_t yaw)
 {
 #ifdef QUAD_FORMATION_X
+  // FIXME: don't use! won't work without code to rotate axes elsewhere
   roll = roll >> 1;
   pitch = pitch >> 1;
   motorPowerM1 = limitThrust((int32_t) thrust - roll + pitch + yaw);
@@ -482,10 +483,10 @@ LOG_ADD(LOG_FLOAT, z, &mag.z)
 LOG_GROUP_STOP(mag)
 
 LOG_GROUP_START(motor)
-LOG_ADD(LOG_INT32, m4, &motorPowerM4)
 LOG_ADD(LOG_INT32, m1, &motorPowerM1)
 LOG_ADD(LOG_INT32, m2, &motorPowerM2)
 LOG_ADD(LOG_INT32, m3, &motorPowerM3)
+LOG_ADD(LOG_INT32, m4, &motorPowerM4)
 LOG_GROUP_STOP(motor)
 
 // LOG altitude hold PID controller states

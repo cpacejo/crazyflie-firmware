@@ -97,7 +97,7 @@ void pidUpdate360(PidObject* pid, const float measured, const bool updateError)
     }
     else if (pid->integ < -pid->iLimit)
     {
-        pid->integ = pid->iLimit;
+        pid->integ = -pid->iLimit;
     }
 
     pid->deriv = wrapAngle(pid->error - pid->prevError) / pid->dt;
