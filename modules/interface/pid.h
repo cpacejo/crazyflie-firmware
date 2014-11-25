@@ -29,38 +29,38 @@
 
 #include <stdbool.h>
 
-#define PID_ROLL_RATE_KP  70.0
-#define PID_ROLL_RATE_KI  0.0
-#define PID_ROLL_RATE_KD  0.0
-#define PID_ROLL_RATE_INTEGRATION_LIMIT    100.0
+#define PID_ROLL_RATE_KP  70.0f
+#define PID_ROLL_RATE_KI  0.0f
+#define PID_ROLL_RATE_KD  0.0f
+#define PID_ROLL_RATE_INTEGRATION_LIMIT    100.0f
 
-#define PID_PITCH_RATE_KP  70.0
-#define PID_PITCH_RATE_KI  0.0
-#define PID_PITCH_RATE_KD  0.0
-#define PID_PITCH_RATE_INTEGRATION_LIMIT   100.0
+#define PID_PITCH_RATE_KP  70.0f
+#define PID_PITCH_RATE_KI  0.0f
+#define PID_PITCH_RATE_KD  0.0f
+#define PID_PITCH_RATE_INTEGRATION_LIMIT   100.0f
 
-#define PID_YAW_RATE_KP  50.0
-#define PID_YAW_RATE_KI  25.0
-#define PID_YAW_RATE_KD  0.0
-#define PID_YAW_RATE_INTEGRATION_LIMIT     500.0
+#define PID_YAW_RATE_KP  50.0f
+#define PID_YAW_RATE_KI  75.0f
+#define PID_YAW_RATE_KD  0.0f
+#define PID_YAW_RATE_INTEGRATION_LIMIT     500.0f
 
-#define PID_ROLL_KP  3.5
-#define PID_ROLL_KI  2.0
-#define PID_ROLL_KD  0.0
-#define PID_ROLL_INTEGRATION_LIMIT    20.0
+#define PID_ROLL_KP  3.5f
+#define PID_ROLL_KI  6.0f
+#define PID_ROLL_KD  0.0f
+#define PID_ROLL_INTEGRATION_LIMIT    20.0f
 
-#define PID_PITCH_KP  3.5
-#define PID_PITCH_KI  2.0
-#define PID_PITCH_KD  0.0
-#define PID_PITCH_INTEGRATION_LIMIT   20.0
+#define PID_PITCH_KP  3.5f
+#define PID_PITCH_KI  6.0f
+#define PID_PITCH_KD  0.0f
+#define PID_PITCH_INTEGRATION_LIMIT   20.0f
 
-#define PID_YAW_KP  0.0
-#define PID_YAW_KI  0.0
-#define PID_YAW_KD  0.0
-#define PID_YAW_INTEGRATION_LIMIT     360.0
+#define PID_YAW_KP  0.0f
+#define PID_YAW_KI  0.0f
+#define PID_YAW_KD  0.0f
+#define PID_YAW_INTEGRATION_LIMIT     360.0f
 
 
-#define DEFAULT_PID_INTEGRATION_LIMIT  5000.0
+#define DEFAULT_PID_INTEGRATION_LIMIT  5000.0f
 
 typedef struct
 {
@@ -115,9 +115,16 @@ void pidReset(PidObject* pid);
  * @param[in] measured    The measured value
  * @param[in] updateError Set to TRUE if error should be calculated.
  *                        Set to False if pidSetError() has been used.
+ */
+void pidUpdate(PidObject* pid, const float measured, const bool updateError);
+
+/**
+ * Return the PID output.
+ *
+ * @param[in] pid         A pointer to the pid object.
  * @return PID algorithm output
  */
-float pidUpdate(PidObject* pid, const float measured, const bool updateError);
+float pidGetOutput(PidObject* pid);
 
 /**
  * Set a new set point for the PID to track.

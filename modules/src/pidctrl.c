@@ -82,24 +82,24 @@ void pidCrtlTask(void *param)
         case pidCtrlValues:
           pPid = (struct pidValues *)p.data;
           {
-            pidSetKp(&pidRollRate, (float)pPid->rateKpRP/100.0);
-            pidSetKi(&pidRollRate, (float)pPid->rateKiRP/100.0);
-            pidSetKd(&pidRollRate, (float)pPid->rateKdRP/100.0);
-            pidSetKp(&pidRoll, (float)pPid->attKpRP/100.0);
-            pidSetKi(&pidRoll, (float)pPid->attKiRP/100.0);
-            pidSetKd(&pidRoll, (float)pPid->attKdRP/100.0);
-            pidSetKp(&pidPitchRate, (float)pPid->rateKpRP/100.0);
-            pidSetKi(&pidPitchRate, (float)pPid->rateKiRP/100.0);
-            pidSetKd(&pidPitchRate, (float)pPid->rateKdRP/100.0);
-            pidSetKp(&pidPitch, (float)pPid->attKpRP/100.0);
-            pidSetKi(&pidPitch, (float)pPid->attKiRP/100.0);
-            pidSetKd(&pidPitch, (float)pPid->attKdRP/100.0);
-            pidSetKp(&pidYawRate, (float)pPid->rateKpY/100.0);
-            pidSetKi(&pidYawRate, (float)pPid->rateKiY/100.0);
-            pidSetKd(&pidYawRate, (float)pPid->rateKdY/100.0);
-            pidSetKp(&pidYaw, (float)pPid->attKpY/100.0);
-            pidSetKi(&pidYaw, (float)pPid->attKiY/100.0);
-            pidSetKd(&pidYaw, (float)pPid->attKdY/100.0);
+            pidSetKp(&pidRollRate, (float)pPid->rateKpRP/100.0f);
+            pidSetKi(&pidRollRate, (float)pPid->rateKiRP/100.0f);
+            pidSetKd(&pidRollRate, (float)pPid->rateKdRP/100.0f);
+            pidSetKp(&pidRoll, (float)pPid->attKpRP/100.0f);
+            pidSetKi(&pidRoll, (float)pPid->attKiRP/100.0f);
+            pidSetKd(&pidRoll, (float)pPid->attKdRP/100.0f);
+            pidSetKp(&pidPitchRate, (float)pPid->rateKpRP/100.0f);
+            pidSetKi(&pidPitchRate, (float)pPid->rateKiRP/100.0f);
+            pidSetKd(&pidPitchRate, (float)pPid->rateKdRP/100.0f);
+            pidSetKp(&pidPitch, (float)pPid->attKpRP/100.0f);
+            pidSetKi(&pidPitch, (float)pPid->attKiRP/100.0f);
+            pidSetKd(&pidPitch, (float)pPid->attKdRP/100.0f);
+            pidSetKp(&pidYawRate, (float)pPid->rateKpY/100.0f);
+            pidSetKi(&pidYawRate, (float)pPid->rateKiY/100.0f);
+            pidSetKd(&pidYawRate, (float)pPid->rateKdY/100.0f);
+            pidSetKp(&pidYaw, (float)pPid->attKpY/100.0f);
+            pidSetKi(&pidYaw, (float)pPid->attKiY/100.0f);
+            pidSetKd(&pidYaw, (float)pPid->attKdY/100.0f);
           }
           break;
         default:

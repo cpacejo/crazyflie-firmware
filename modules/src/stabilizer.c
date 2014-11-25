@@ -294,7 +294,7 @@ static void stabilizerAltHoldUpdate(void)
   // Reset Integral gain of PID controller if being charged
   if (!pmIsDischarging())
   {
-    altHoldPID.integ = 0.0;
+    altHoldPID.integ = 0.0f;
   }
 
   // Altitude hold mode just activated, set target altitude as current altitude. Reuse previous integral term as a starting point
@@ -312,12 +312,13 @@ static void stabilizerAltHoldUpdate(void)
     // TODO set low and high limits depending on voltage
     // TODO for now just use previous I value and manually set limits for whole voltage range
     //                    pidSetIntegralLimit(&altHoldPID, 12345);
-    //                    pidSetIntegralLimitLow(&altHoldPID, 12345);              /
+    //                    pidSetIntegralLimitLow(&altHoldPID, 12345);
 
     altHoldPID.integ = pre_integral;
 
     // Reset altHoldPID
-    altHoldPIDVal = pidUpdate(&altHoldPID, asl, false);
+    pidUpdate(&altHoldPID, asl, false);
+    altHoldPIDVal = pidGetOutput(&altHoldPID);
   }
 
   // In altitude hold mode
@@ -335,8 +336,9 @@ static void stabilizerAltHoldUpdate(void)
     // Get control from PID controller, dont update the error (done above)
     // Smooth it and include barometer vspeed
     // TODO same as smoothing the error??
+    pidUpdate(&altHoldPID, asl, false);
     altHoldPIDVal = (pidAlpha) * altHoldPIDVal + (1.f - pidAlpha) * ((vSpeedAcc * vSpeedAccFac) +
-                    (vSpeedASL * vSpeedASLFac) + pidUpdate(&altHoldPID, asl, false));
+                    (vSpeedASL * vSpeedASLFac) + pidGetOutput(&altHoldPID));
 
     // compute new thrust
     actuatorThrust =  max(altHoldMinThrust, min(altHoldMaxThrust,
@@ -347,9 +349,9 @@ static void stabilizerAltHoldUpdate(void)
   }
   else
   {
-    altHoldTarget = 0.0;
-    altHoldErr = 0.0;
-    altHoldPIDVal = 0.0;
+    altHoldTarget = 0.0f;
+    altHoldErr = 0.0f;
+    altHoldPIDVal = 0.0f;
   }
 }
 
@@ -359,15 +361,15 @@ static void distributePower(const uint16_t thrust, const int16_t roll,
 #ifdef QUAD_FORMATION_X
   roll = roll >> 1;
   pitch = pitch >> 1;
-  motorPowerM1 = limitThrust(thrust - roll + pitch + yaw);
-  motorPowerM2 = limitThrust(thrust - roll - pitch - yaw);
-  motorPowerM3 =  limitThrust(thrust + roll - pitch + yaw);
-  motorPowerM4 =  limitThrust(thrust + roll + pitch - yaw);
+  motorPowerM1 = limitThrust((int32_t) thrust - roll + pitch + yaw);
+  motorPowerM2 = limitThrust((int32_t) thrust - roll - pitch - yaw);
+  motorPowerM3 =  limitThrust((int32_t) thrust + roll - pitch + yaw);
+  motorPowerM4 =  limitThrust((int32_t) thrust + roll + pitch - yaw);
 #else // QUAD_FORMATION_NORMAL
-  motorPowerM1 = limitThrust(thrust + pitch + yaw);
-  motorPowerM2 = limitThrust(thrust - roll - yaw);
-  motorPowerM3 =  limitThrust(thrust - pitch + yaw);
-  motorPowerM4 =  limitThrust(thrust + roll - yaw);
+  motorPowerM1 = limitThrust((int32_t) thrust + pitch + yaw);
+  motorPowerM2 = limitThrust((int32_t) thrust - roll - yaw);
+  motorPowerM3 =  limitThrust((int32_t) thrust - pitch + yaw);
+  motorPowerM4 =  limitThrust((int32_t) thrust + roll - yaw);
 #endif
 
   motorsSetRatio(MOTOR_M1, motorPowerM1);
@@ -391,7 +393,7 @@ static uint16_t limitThrust(int32_t value)
 }
 
 // Constrain value between min and max
-static float constrain(float value, const float minVal, const float maxVal)
+static float constrain(const float value, const float minVal, const float maxVal)
 {
   return min(maxVal, max(minVal,value));
 }

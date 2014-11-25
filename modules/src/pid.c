@@ -49,10 +49,8 @@ void pidInit(PidObject* pid, const float desired, const float kp,
   pid->dt        = dt;
 }
 
-float pidUpdate(PidObject* pid, const float measured, const bool updateError)
+void pidUpdate(PidObject* pid, const float measured, const bool updateError)
 {
-    float output;
-
     if (updateError)
     {
         pid->error = pid->desired - measured;
@@ -74,11 +72,12 @@ float pidUpdate(PidObject* pid, const float measured, const bool updateError)
     pid->outI = pid->ki * pid->integ;
     pid->outD = pid->kd * pid->deriv;
 
-    output = pid->outP + pid->outI + pid->outD;
-
     pid->prevError = pid->error;
+}
 
-    return output;
+float pidGetOutput(PidObject* pid)
+{
+    return pid->outP + pid->outI + pid->outD;
 }
 
 void pidSetIntegralLimit(PidObject* pid, const float limit) {
@@ -117,7 +116,7 @@ bool pidIsActive(PidObject* pid)
 {
   bool isActive = TRUE;
 
-  if (pid->kp < 0.0001 && pid->ki < 0.0001 && pid->kd < 0.0001)
+  if (pid->kp < 0.0001f && pid->ki < 0.0001f && pid->kd < 0.0001f)
   {
     isActive = FALSE;
   }
