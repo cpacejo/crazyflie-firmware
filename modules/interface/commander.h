@@ -34,7 +34,8 @@
 typedef enum
 {
   RATE,
-  ANGLE
+  ANGLE,
+  CRATE
 } RPYType;
 
 void commanderInit(void);

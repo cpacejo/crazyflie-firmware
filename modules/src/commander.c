@@ -139,7 +139,7 @@ void commanderGetRPYType(RPYType* rollType, RPYType* pitchType, RPYType* yawType
 {
   *rollType  = ANGLE;
   *pitchType = ANGLE;
-  *yawType   = RATE;
+  *yawType   = CRATE;
 }
 
 void commanderGetThrust(uint16_t* thrust)

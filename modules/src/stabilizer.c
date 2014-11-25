@@ -154,6 +154,10 @@ void stabilizerInit(void)
   pitchRateDesired = 0;
   yawRateDesired = 0;
 
+  eulerRollDesired = 0;
+  eulerPitchDesired = 0;
+  eulerYawDesired = 0;
+
   xTaskCreate(stabilizerTask, (const signed char * const)"STABILIZER",
               2*configMINIMAL_STACK_SIZE, NULL, /*Piority*/2, NULL);
 
@@ -194,12 +198,40 @@ static void stabilizerTask(void* param)
 
     if (imu6IsCalibrated())
     {
-      commanderGetRPY(&eulerRollDesired, &eulerPitchDesired, &eulerYawDesired);
+      float tempEulerRollDesired, tempEulerPitchDesired, tempEulerYawDesired;
+
+      commanderGetRPY(&tempEulerRollDesired, &tempEulerPitchDesired, &tempEulerYawDesired);
       commanderGetRPYType(&rollType, &pitchType, &yawType);
+
+      if (rollType == ANGLE)
+      {
+        eulerRollDesired = tempEulerRollDesired;
+      }
+      if (pitchType == ANGLE)
+      {
+        eulerPitchDesired = tempEulerPitchDesired;
+      }
+      if (yawType == ANGLE)
+      {
+        eulerYawDesired = tempEulerYawDesired;
+      }
 
       // 250HZ
       if (++attitudeCounter >= ATTITUDE_UPDATE_RATE_DIVIDER)
       {
+        if (rollType == CRATE)
+        {
+          eulerRollDesired += tempEulerRollDesired * FUSION_UPDATE_DT;
+        }
+        if (pitchType == CRATE)
+        {
+          eulerPitchDesired += tempEulerPitchDesired * FUSION_UPDATE_DT;
+        }
+        if (yawType == CRATE)
+        {
+          eulerYawDesired += tempEulerYawDesired * FUSION_UPDATE_DT;
+        }
+
         sensfusion6UpdateQ(gyro.x, gyro.y, gyro.z, acc.x, acc.y, acc.z, FUSION_UPDATE_DT);
         sensfusion6GetEulerRPY(&eulerRollActual, &eulerPitchActual, &eulerYawActual);
 
@@ -223,15 +255,15 @@ static void stabilizerTask(void* param)
 
       if (rollType == RATE)
       {
-        rollRateDesired = eulerRollDesired;
+        rollRateDesired = tempEulerRollDesired;
       }
       if (pitchType == RATE)
       {
-        pitchRateDesired = eulerPitchDesired;
+        pitchRateDesired = tempEulerPitchDesired;
       }
       if (yawType == RATE)
       {
-        yawRateDesired = -eulerYawDesired;
+        yawRateDesired = -tempEulerYawDesired;
       }
 
       // TODO: Investigate possibility to subtract gyro drift.
@@ -267,6 +299,12 @@ static void stabilizerTask(void* param)
       {
         distributePower(0, 0, 0, 0);
         controllerResetAllPID();
+        if (rollType == CRATE)
+          eulerRollDesired = eulerRollActual;
+        if (pitchType == CRATE)
+          eulerPitchDesired = eulerPitchActual;
+        if (yawType == CRATE)
+          eulerYawDesired = -eulerYawActual;
       }
     }
   }

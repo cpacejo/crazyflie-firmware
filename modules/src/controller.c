@@ -53,7 +53,23 @@ int16_t yawOutput;
 
 static bool isInit;
 
-void controllerInit()
+static float wrapAngle(float angle)
+{
+  while (angle >= 180.0f)
+    angle -= 360.0f;
+  while (angle < -180.0f)
+    angle += 360.0f;
+  return angle;
+}
+
+static float limitSlew(const float rate, const float maxRate)
+{
+  if (rate > maxRate) return maxRate;
+  if (rate < -maxRate) return -maxRate;
+  return rate;
+}
+
+void controllerInit(void)
 {
   if(isInit)
     return;
@@ -76,7 +92,7 @@ void controllerInit()
   isInit = true;
 }
 
-bool controllerTest()
+bool controllerTest(void)
 {
   return isInit;
 }
@@ -103,25 +119,20 @@ void controllerCorrectAttitudePID(
        float eulerRollDesired, float eulerPitchDesired, float eulerYawDesired,
        float* rollRateDesired, float* pitchRateDesired, float* yawRateDesired)
 {
-  pidSetDesired(&pidRoll, eulerRollDesired);
-  pidUpdate(&pidRoll, eulerRollActual, TRUE);
-  *rollRateDesired = pidGetOutput(&pidRoll);
+  // Update PID for roll axis
+  pidSetError(&pidRoll, wrapAngle(eulerRollDesired - eulerRollActual));
+  pidUpdate(&pidRoll, eulerRollActual, FALSE);
+  *rollRateDesired = limitSlew(pidGetOutput(&pidRoll), PID_ROLL_MAX_SLEW);
 
   // Update PID for pitch axis
-  pidSetDesired(&pidPitch, eulerPitchDesired);
-  pidUpdate(&pidPitch, eulerPitchActual, TRUE);
-  *pitchRateDesired = pidGetOutput(&pidPitch);
+  pidSetError(&pidPitch, wrapAngle(eulerPitchDesired - eulerPitchActual));
+  pidUpdate(&pidPitch, eulerPitchActual, FALSE);
+  *pitchRateDesired = limitSlew(pidGetOutput(&pidPitch), PID_PITCH_MAX_SLEW);
 
   // Update PID for yaw axis
-  float yawError;
-  yawError = eulerYawDesired - eulerYawActual;
-  if (yawError > 180.0f)
-    yawError -= 360.0f;
-  else if (yawError < -180.0f)
-    yawError += 360.0f;
-  pidSetError(&pidYaw, yawError);
+  pidSetError(&pidYaw, wrapAngle(eulerYawDesired - eulerYawActual));
   pidUpdate(&pidYaw, eulerYawActual, FALSE);
-  *yawRateDesired = pidGetOutput(&pidYaw);
+  *yawRateDesired = limitSlew(pidGetOutput(&pidYaw), PID_YAW_MAX_SLEW);
 }
 
 void controllerResetAllPID(void)
