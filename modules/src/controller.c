@@ -53,15 +53,6 @@ int16_t yawOutput;
 
 static bool isInit;
 
-static float wrapAngle(float angle)
-{
-  while (angle >= 180.0f)
-    angle -= 360.0f;
-  while (angle < -180.0f)
-    angle += 360.0f;
-  return angle;
-}
-
 static float limitSlew(const float rate, const float maxRate)
 {
   if (rate > maxRate) return maxRate;
@@ -119,19 +110,21 @@ void controllerCorrectAttitudePID(
        float eulerRollDesired, float eulerPitchDesired, float eulerYawDesired,
        float* rollRateDesired, float* pitchRateDesired, float* yawRateDesired)
 {
+  // FIXME: do we need to limit slew?
+
   // Update PID for roll axis
-  pidSetError(&pidRoll, wrapAngle(eulerRollDesired - eulerRollActual));
-  pidUpdate(&pidRoll, eulerRollActual, FALSE);
+  pidSetDesired(&pidRoll, eulerRollDesired);
+  pidUpdate360(&pidRoll, eulerRollActual, true);
   *rollRateDesired = limitSlew(pidGetOutput(&pidRoll), PID_ROLL_MAX_SLEW);
 
   // Update PID for pitch axis
-  pidSetError(&pidPitch, wrapAngle(eulerPitchDesired - eulerPitchActual));
-  pidUpdate(&pidPitch, eulerPitchActual, FALSE);
+  pidSetDesired(&pidPitch, eulerPitchDesired);
+  pidUpdate360(&pidPitch, eulerPitchActual, true);
   *pitchRateDesired = limitSlew(pidGetOutput(&pidPitch), PID_PITCH_MAX_SLEW);
 
   // Update PID for yaw axis
-  pidSetError(&pidYaw, wrapAngle(eulerYawDesired - eulerYawActual));
-  pidUpdate(&pidYaw, eulerYawActual, FALSE);
+  pidSetDesired(&pidYaw, eulerYawDesired);
+  pidUpdate360(&pidYaw, eulerYawActual, true);
   *yawRateDesired = limitSlew(pidGetOutput(&pidYaw), PID_YAW_MAX_SLEW);
 }
 

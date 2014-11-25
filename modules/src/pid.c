@@ -33,6 +33,15 @@
 #include "led.h"
 #include "motors.h"
 
+static float wrapAngle(float angle)
+{
+  while (angle >= 180.0f)
+    angle -= 360.0f;
+  while (angle < -180.0f)
+    angle += 360.0f;
+  return angle;
+}
+
 void pidInit(PidObject* pid, const float desired, const float kp,
              const float ki, const float kd, const float dt)
 {
@@ -66,6 +75,32 @@ void pidUpdate(PidObject* pid, const float measured, const bool updateError)
     }
 
     pid->deriv = (pid->error - pid->prevError) / pid->dt;
+
+    pid->outP = pid->kp * pid->error;
+    pid->outI = pid->ki * pid->integ;
+    pid->outD = pid->kd * pid->deriv;
+
+    pid->prevError = pid->error;
+}
+
+void pidUpdate360(PidObject* pid, const float measured, const bool updateError)
+{
+    if (updateError)
+    {
+        pid->error = wrapAngle(pid->desired - measured);
+    }
+
+    pid->integ += pid->error * pid->dt;
+    if (pid->integ > pid->iLimit)
+    {
+        pid->integ = pid->iLimit;
+    }
+    else if (pid->integ < -pid->iLimit)
+    {
+        pid->integ = pid->iLimit;
+    }
+
+    pid->deriv = wrapAngle(pid->error - pid->prevError) / pid->dt;
 
     pid->outP = pid->kp * pid->error;
     pid->outI = pid->ki * pid->integ;

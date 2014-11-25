@@ -121,6 +121,16 @@ void pidReset(PidObject* pid);
 void pidUpdate(PidObject* pid, const float measured, const bool updateError);
 
 /**
+ * Update the PID parameters for a rotational PV.
+ *
+ * @param[in] pid         A pointer to the pid object.
+ * @param[in] measured    The measured angle
+ * @param[in] updateError Set to TRUE if error should be calculated.
+ *                        Set to False if pidSetError() has been used.
+ */
+void pidUpdate360(PidObject* pid, const float measured, const bool updateError);
+
+/**
  * Return the PID output.
  *
  * @param[in] pid         A pointer to the pid object.
