@@ -142,7 +142,7 @@ void commanderGetRPYType(RPYType* rollType, RPYType* pitchType, RPYType* yawType
   *yawType   = CRATE;
 }
 
-void commanderGetThrust(uint16_t* thrust)
+void commanderGetThrust(float* thrust)
 {
   int usedSide = side;
   uint16_t rawThrust = targetVal[usedSide].thrust;

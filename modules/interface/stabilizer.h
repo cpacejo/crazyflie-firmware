@@ -28,6 +28,8 @@
 
 #include <stdbool.h>
 
+#define REFERENCE_THRUST_TO_VERTICAL 1
+
 void stabilizerInit(void);
 
 bool stabilizerTest(void);

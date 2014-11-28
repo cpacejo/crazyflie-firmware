@@ -75,6 +75,7 @@ static float eulerYawDesired;
 static float rollRateDesired;
 static float pitchRateDesired;
 static float yawRateDesired;
+static float thrustDesired;
 
 // Baro variables
 static float temperature; // temp from barometer
@@ -278,7 +279,25 @@ static void stabilizerTask(void* param)
       if (!altHold || !imuHasBarometer())
       {
         // Use thrust from controller if not in altitude hold mode
-        commanderGetThrust(&actuatorThrust);
+        commanderGetThrust(&thrustDesired);
+#if REFERENCE_THRUST_TO_VERTICAL
+        const float cosTiltAngle = cosf(hypotf(eulerRollActual, eulerPitchActual) * (float) (M_PI / 180));
+
+        if (cosTiltAngle < 0.0f) {
+          // oops, we're upside down.
+          actuatorThrust = 0.0f;
+        }
+        else if (cosTiltAngle < 0.5f) {
+          // cap at 2x thrust input
+          actuatorThrust = max(0, min(UINT16_MAX, thrustDesired * 2.0f));
+        }
+        else {
+          // compensate for tilt
+          actuatorThrust = max(0, min(UINT16_MAX, thrustDesired / cosTiltAngle));
+        }
+#else
+        actuatorThrust = thrustDesired;
+#endif
       }
       else
       {
