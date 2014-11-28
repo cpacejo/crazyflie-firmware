@@ -44,9 +44,12 @@
 #include "ms5611.h"
 
 #undef max
-#define max(a,b) ((a) > (b) ? (a) : (b))
+#define max(a,b) ({ __typeof__ (a) _a = (a); __typeof__ (b) _b = (b); _a > _b ? _a : _b; })
 #undef min
-#define min(a,b) ((a) < (b) ? (a) : (b))
+#define min(a,b) ({ __typeof__ (a) _a = (a); __typeof__ (b) _b = (b); _a < _b ? _a : _b; })
+
+#undef abs
+#define abs(x) ({ __typeof__ (x) _x = (x); _x < 0 ? -_x : _x; })
 
 /**
  * Defines in what divided update rate should the attitude
@@ -393,8 +396,8 @@ static void stabilizerAltHoldUpdate(void)
   }
 }
 
-static void distributePower(const uint16_t thrust, const int16_t roll,
-                            const int16_t pitch, const int16_t yaw)
+static void distributePower(uint16_t thrust, int16_t roll,
+                            int16_t pitch, int16_t yaw)
 {
 #ifdef QUAD_FORMATION_X
   // FIXME: don't use! won't work without code to rotate axes elsewhere
@@ -402,13 +405,39 @@ static void distributePower(const uint16_t thrust, const int16_t roll,
   pitch = pitch >> 1;
   motorPowerM1 = limitThrust((int32_t) thrust - roll + pitch + yaw);
   motorPowerM2 = limitThrust((int32_t) thrust - roll - pitch - yaw);
-  motorPowerM3 =  limitThrust((int32_t) thrust + roll - pitch + yaw);
-  motorPowerM4 =  limitThrust((int32_t) thrust + roll + pitch - yaw);
+  motorPowerM3 = limitThrust((int32_t) thrust + roll - pitch + yaw);
+  motorPowerM4 = limitThrust((int32_t) thrust + roll + pitch - yaw);
 #else // QUAD_FORMATION_NORMAL
+  // smart clipping: if we just clipped individual motor outputs,
+  // a "pitch" output could result in yaw, etc.
+  // so instead, clip along the controlled axes
+
+  // prioritize yaw; pitch/roll is useless if our yaw is out of control
+  // limit pitch & roll (equally); at the expense of thrust
+  // work only with absolute value; not only does it simplify,
+  // it ensures we don't stochastically favor one direction
+  const int32_t abs_yaw = abs((int32_t) yaw);
+  const int32_t max_abs_pitch_roll = max(abs((int32_t) pitch), abs((int32_t) roll));
+  const int32_t half_thrust = UINT16_MAX / 2;  // half rounded down
+  if (abs_yaw + max_abs_pitch_roll > half_thrust)
+  {
+    const float ratio = (float) (half_thrust - abs_yaw) / (float) max_abs_pitch_roll;
+    pitch *= ratio;
+    roll *= ratio;
+  }
+  else
+  {
+    if (abs_yaw + max_abs_pitch_roll + thrust > UINT16_MAX)
+      thrust = UINT16_MAX - (abs_yaw + max_abs_pitch_roll);
+    else if (abs_yaw + max_abs_pitch_roll > thrust)
+      thrust = abs_yaw + max_abs_pitch_roll;
+  }
+
+  // now, still, limitThrust() in case of float rounding errors
   motorPowerM1 = limitThrust((int32_t) thrust + pitch + yaw);
   motorPowerM2 = limitThrust((int32_t) thrust - roll - yaw);
-  motorPowerM3 =  limitThrust((int32_t) thrust - pitch + yaw);
-  motorPowerM4 =  limitThrust((int32_t) thrust + roll - yaw);
+  motorPowerM3 = limitThrust((int32_t) thrust - pitch + yaw);
+  motorPowerM4 = limitThrust((int32_t) thrust + roll - yaw);
 #endif
 
   motorsSetRatio(MOTOR_M1, motorPowerM1);
