@@ -61,6 +61,7 @@ void pidUpdate(PidObject* pid, const float measured, const bool updateError)
 {
     if (updateError)
     {
+        pid->prevError = pid->error;
         pid->error = pid->desired - measured;
     }
 
@@ -79,14 +80,13 @@ void pidUpdate(PidObject* pid, const float measured, const bool updateError)
     pid->outP = pid->kp * pid->error;
     pid->outI = pid->ki * pid->integ;
     pid->outD = pid->kd * pid->deriv;
-
-    pid->prevError = pid->error;
 }
 
 void pidUpdate360(PidObject* pid, const float measured, const bool updateError)
 {
     if (updateError)
     {
+        pid->prevError = pid->error;
         pid->error = wrapAngle(pid->desired - measured);
     }
 
@@ -105,8 +105,6 @@ void pidUpdate360(PidObject* pid, const float measured, const bool updateError)
     pid->outP = pid->kp * pid->error;
     pid->outI = pid->ki * pid->integ;
     pid->outD = pid->kd * pid->deriv;
-
-    pid->prevError = pid->error;
 }
 
 float pidGetOutput(PidObject* pid)
