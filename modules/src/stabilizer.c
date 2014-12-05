@@ -305,7 +305,7 @@ static void stabilizerTask(void* param)
         commanderWatchdog();
       }
 
-      if (actuatorThrust > 0)
+      if (thrustDesired > 0)
       {
 #if defined(TUNE_ROLL)
         distributePower(actuatorThrust, actuatorRoll, 0, 0);
