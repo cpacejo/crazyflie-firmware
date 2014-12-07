@@ -72,7 +72,7 @@ PROJ_OBJ += commander.o controller.o sensfusion6.o stabilizer.o
 PROJ_OBJ += log.o worker.o
 
 # Utilities
-PROJ_OBJ += filter.o cpuid.o cfassert.o configblock.o eprintf.o crc.o fp16.o debug.o abort.o
+PROJ_OBJ += filter.o cpuid.o cfassert.o configblock.o eprintf.o crc.o fix.o quaternion.o fp16.o debug.o abort.o
 PROJ_OBJ += version.o
 
 
@@ -97,13 +97,15 @@ INCLUDES+= -Iutils/interface -Idrivers/interface
 
 PROCESSOR = -mcpu=cortex-m3 -mthumb
 
+CFLAGS += -std=gnu99
+
 #Flags required by the ST library
 STFLAGS = -DSTM32F10X_MD -include stm32f10x_conf.h
 
 ifeq ($(DEBUG), 1)
   CFLAGS += -O0 -g3
 else
-  CFLAGS += -Os -g3
+  CFLAGS += -O2 -g3  # -Os gives internal compiler error in build_int_cst_wide line 1222
 endif
 
 ifeq ($(LTO), 1)
