@@ -44,6 +44,7 @@
 #include "crc.h"
 #include "worker.h"
 #include "fp16.h"
+#include "fix.h"
 
 #include "console.h"
 #include "cfassert.h"
@@ -501,7 +502,8 @@ void logRunBlock(void * arg)
   while (ops)
   {
     int valuei = 0;
-    float valuef = 0;
+    float valuef = 0.0f;
+    fix_t valuek = 0.0k;
      
     switch(ops->storageType)
     {
@@ -526,12 +528,17 @@ void logRunBlock(void * arg)
       case LOG_FLOAT:
         valuei = *(float *)ops->variable;
         break;
+      case LOG_FIX:
+        valuei = *(fix_t *)ops->variable;
+        break;
     }
     
     if (ops->logType == LOG_FLOAT || ops->logType == LOG_FP16)
     {
       if (ops->storageType == LOG_FLOAT)
         valuef = *(float *)ops->variable;
+      else if (ops->storageType == LOG_FIX)
+        valuef = *(fix_t *)ops->variable;
       else
         valuef = valuei;
       
@@ -546,6 +553,18 @@ void logRunBlock(void * arg)
         memcpy(&pk.data[pk.size], &valuei, 2);
         pk.size += 2;
       }
+    }
+    else if (ops->logType == LOG_FIX)
+    {
+      if (ops->storageType == LOG_FLOAT)
+        valuek = FIX(*(float *)ops->variable);
+      else if (ops->storageType == LOG_FIX)
+        valuek = *(fix_t *)ops->variable;
+      else
+        valuek = FIX(valuei);
+
+      memcpy(&pk.data[pk.size], &valuek, 4);
+      pk.size += 4;
     }
     else  //logType is an integer
     {
@@ -708,6 +727,9 @@ int logGetInt(int varid)
     case LOG_FLOAT:
       valuei = *(float *)logs[varid].address;
       break;
+    case LOG_FIX:
+      valuei = *(fix_t *)logs[varid].address;
+      break;
   }
   
   return valuei;
@@ -719,6 +741,8 @@ float logGetFloat(int varid)
 
   if (logs[varid].type == LOG_FLOAT)
     return *(float *)logs[varid].address;
+  else if (logs[varid].type == LOG_FIX)
+    return *(fix_t *)logs[varid].address;
   
   return logGetInt(varid);
 }
