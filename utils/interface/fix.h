@@ -32,10 +32,11 @@
 
 typedef accum fix_t;  // suffix is k
 
-#define FIX_MIN (-65535.0k)
-#define FIX_MAX 65535.0k
+#define FIX_MIN (-0xFFFF.FFFFk)
+#define FIX_MAX 0xFFFF.FFFFk
 #define FIX_IBIT 16
 #define FIX_FBIT 15
+#define SIZEOF_FIX 4
 
 // saturation conversion to fixpoint
 #define FIX(x) ((fix_t) (sat accum) (x))
@@ -57,6 +58,7 @@ fix_t constrainfix(fix_t x, fix_t min, fix_t max);
 fix_t sqrtfix(fix_t x);
 fix_t invsqrtfix(fix_t x);
 
+int floorLog2fix(fix_t x);
 fix_t sinfix(fix_t x);
 fix_t cosfix(fix_t x);
 void sincosfix(fix_t x, fix_t *restrict s, fix_t *restrict c);

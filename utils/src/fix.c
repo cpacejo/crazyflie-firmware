@@ -65,20 +65,11 @@ fix_t invsqrtfix(const fix_t x)
   fix_t res;
 
   // compute res = 2 ** (0.5 * round(log2(x)))
-  if (x < 1.0k)
-  {
-    unsigned int neg_log_2 = 0;
-    for (fix_t y = x * M_SQRT2_FIX; y < 1.0k; y <<= 1)
-      neg_log_2++;
-    res = ((neg_log_2 & 1) == 0 ? 1.0k : M_SQRT2_FIX) << (neg_log_2 >> 1);
-  }
+  const int log_2 = floorLog2fix(x * M_SQRT2_FIX);
+  if (log_2 < 0)
+    res = (((-log_2) & 1) == 0 ? 1.0k : M_SQRT2_FIX) << ((-log_2) >> 1);
   else
-  {
-    unsigned int log_2 = 0;
-    for (fix_t y = x * M_SQRT1_2_FIX; y > 1.0k; y >>= 1)
-      log_2++;
     res = ((log_2 & 1) == 0 ? 1.0k : M_SQRT1_2_FIX) >> (log_2 >> 1);
-  }
 
   const fix_t half_x = 0.5k * x;
   for (unsigned int i = 0; i < 4; i++) {
@@ -99,6 +90,22 @@ fix_t sqrtfix(const fix_t x)
 //
 // TRANSCENDENTAL
 //
+
+int floorLog2fix(const fix_t x)
+{
+  // we make a lot of assumptions here, regarding the fix-point format
+#if SIZEOF_FIX == __SIZEOF_INT__
+  const int lz = __builtin_clz(*(unsigned int *) &x);
+#elif SIZEOF_FIX == __SIZEOF_LONG__
+  const int lz = __builtin_clzl(*(unsigned int *) &x);
+#elif SIZEOF_FIX == __SIZEOF_LONG_LONG__
+  const int lz = __builtin_clzll(*(unsigned int *) &x);
+#else
+#error
+#endif
+
+  return ((8 * SIZEOF_FIX) - FIX_FBIT - 1) - lz;
+}
 
 // these assume fabsfix(x) <= M_PI_8_FIX
 static fix_t sinfix_8(const fix_t x)
