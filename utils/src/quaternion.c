@@ -178,7 +178,7 @@ void qFromRPYRate(const fix_t dRoll, const fix_t dPitch,
   fix_t c, sx;  // cos(s*x/2), sin(s*x/2)/x
 
   // the limit of 0.05^2 keeps the errors below 1/2 ULP
-  if (fabsfix(angle2) < 0.0025k) {
+  if (fabsfix(mag2) < 0.0025k) {
     // too close to singularity; compute manually to keep stable
     // (also for speed!)
 
