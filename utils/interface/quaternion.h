@@ -33,8 +33,6 @@ typedef struct {
 
 #define Q_UNIT_INIT { .r = 1.0k, .i = 0.0k, .j = 0.0k, .k = 0.0k }
 
-// below, note aliasing and restrict!!
-
 void qUnit(quaternion_t *out);
 // represent a vector as a quaternion
 void qVec(fix_t vx, fix_t vy, fix_t vz, quaternion_t *out);
@@ -49,19 +47,16 @@ void qScale(fix_t x, const quaternion_t *y, quaternion_t *out);
 // note that qInv(unit) is equivalent to the (faster) qConj(unit)
 void qInv(const quaternion_t *x, quaternion_t *out);
 void qUnitize(const quaternion_t *x, quaternion_t *out);
-void qMul(const quaternion_t *restrict x, const quaternion_t *restrict y,
-          quaternion_t *restrict out);
+void qMul(const quaternion_t *x, const quaternion_t *y, quaternion_t *out);
 // rotate a vector by the given unit quaternion
-void qRot(fix_t vx, fix_t vy, fix_t vz,
-          const quaternion_t *restrict x, fix_t *restrict out_vx,
-          fix_t *restrict out_vy, fix_t *restrict out_vz);
+void qRot(fix_t vx, fix_t vy, fix_t vz, const quaternion_t *x,
+          fix_t *out_vx, fix_t *out_vy, fix_t *out_vz);
 
 // decompose as infinitesmal roll, pitch & yaw rates
 // equivalent to twice the natural logarithm
 // assumes unit quaternion
-void qToRPYRate(const quaternion_t *restrict x,
-                fix_t scale, fix_t *restrict dRoll,
-                fix_t *restrict dPitch, fix_t *restrict dYaw);
+void qToRPYRate(const quaternion_t *x, fix_t scale,
+                fix_t *dRoll, fix_t *dPitch, fix_t *dYaw);
 
 // where would we end up if we kept rotating at this rate for one time unit?
 // equivalent to the square root of the exponent

@@ -28,7 +28,7 @@
 #include "quaternion.h"
 
 
-// below, note aliasing and restrict!!
+// below, note aliasing!!
 
 void qUnit(quaternion_t *const out)
 {
@@ -103,37 +103,45 @@ void qUnitize(const quaternion_t *const x, quaternion_t *const out)
   qScale(invsqrtfix(qNorm2(x)), x, out);
 }
 
-void qMul(const quaternion_t *restrict const x,
-          const quaternion_t *restrict const y,
-          quaternion_t *restrict const out)
+void qMul(const quaternion_t *x,
+          const quaternion_t *y,
+          quaternion_t *out)
 {
-  out->r = x->r * y->r - x->i * y->i - x->j * y->j - x->k * y->k;
-  out->i = x->r * y->i + x->i * y->r + x->j * y->k - x->k * y->j;
-  out->j = x->r * y->j + x->j * y->r + x->k * y->i - x->i * y->k;
-  out->k = x->r * y->k + x->k * y->r + x->i * y->j - x->j * y->i;
+  const fix_t out_r = x->r * y->r - x->i * y->i - x->j * y->j - x->k * y->k;
+  const fix_t out_i = x->r * y->i + x->i * y->r + x->j * y->k - x->k * y->j;
+  const fix_t out_j = x->r * y->j + x->j * y->r + x->k * y->i - x->i * y->k;
+  const fix_t out_k = x->r * y->k + x->k * y->r + x->i * y->j - x->j * y->i;
+  out->r = out_r;
+  out->i = out_i;
+  out->j = out_j;
+  out->k = out_k;
 }
 
 // rotate a vector by the given unit quaternion
 void qRot(const fix_t vx, const fix_t vy, const fix_t vz,
-          const quaternion_t *restrict const x,
-          fix_t *restrict const out_vx,
-          fix_t *restrict const out_vy,
-          fix_t *restrict const out_vz)
+          const quaternion_t *const x,
+          fix_t *const out_vx_p,
+          fix_t *const out_vy_p,
+          fix_t *const out_vz_p)
 {
-  *out_vx =
+  const fix_t out_vx =
     2.0k * (vx * (x->r * x->r + x->i * x->i - 0.5k) +
             vy * (x->i * x->j - x->r * x->k) +
             vz * (x->r * x->j + x->i * x->k));
 
-  *out_vy =
+  const fix_t out_vy =
     2.0k * (vy * (x->r * x->r + x->j * x->j - 0.5k) +
             vz * (x->j * x->k - x->r * x->i) +
             vx * (x->r * x->k + x->i * x->j));
 
-  *out_vz =
+  const fix_t out_vz =
     2.0k * (vz * (x->r * x->r + x->k * x->k - 0.5k) +
             vx * (x->i * x->k - x->r * x->j) +
             vy * (x->r * x->i + x->j * x->k));
+
+  *out_vx_p = out_vx;
+  *out_vy_p = out_vy;
+  *out_vz_p = out_vz;
 }
 
 #if 0
@@ -141,11 +149,8 @@ void qRot(const fix_t vx, const fix_t vy, const fix_t vz,
 // equivalent to twice the natural logarithm
 // assumes unit quaternion
 // TODO: go short way; fix asin
-void qToRPYRate(const quaternion_t *restrict const x,
-                              const fix_t scale,
-                              fix_t *restrict const dRoll,
-                              fix_t *restrict const dPitch,
-                              fix_t *restrict const dYaw)
+void qToRPYRate(const quaternion_t *const x, const fix_t scale,
+                fix_t *const dRoll, fix_t *const dPitch, fix_t *const dYaw)
 {
   const fix_t umag = sqrtf(1.0f - x->r * x->r);
 
@@ -161,9 +166,13 @@ void qToRPYRate(const quaternion_t *restrict const x,
 
   asx *= scale;
 
-  *dPitch = asx * x->i;
-  *dRoll = asx * x->j;
-  *dYaw = asx * x->k;
+  const fix_t dPitch_out = asx * x->i;
+  const fix_t dRoll_out = asx * x->j;
+  const fix_t dYaw_out = asx * x->k;
+
+  *dPitch = dPitch_out;
+  *dRoll = dRoll_out;
+  *dYaw = dYaw_out;
 }
 #endif
 
@@ -201,5 +210,3 @@ void qFromRPYRate(const fix_t dRoll, const fix_t dPitch,
   out->j = sx * dRoll;
   out->k = sx * dYaw;
 }
-
-#undef restrict
