@@ -28,6 +28,7 @@
 
 #include <stdbool.h>
 #include "commander.h"
+#include "fix.h"
 
 
 void controllerInit(void);
@@ -40,17 +41,17 @@ bool controllerTest(void);
  * controller.
  */
 void controllerCorrectAttitudePID(
-       float eulerRollActual, float eulerPitchActual, float eulerYawActual,
-       float eulerRollDesired, float eulerPitchDesired, float eulerYawDesired,
-       float* rollRateDesired, float* pitchRateDesired, float* yawRateDesired);
+       fix_t eulerRollActual, fix_t eulerPitchActual, fix_t eulerYawActual,
+       fix_t eulerRollDesired, fix_t eulerPitchDesired, fix_t eulerYawDesired,
+       fix_t* rollRateDesired, fix_t* pitchRateDesired, fix_t* yawRateDesired);
 
 /**
  * Make the controller run an update of the rate PID. The output is
  * the actuator force.
  */
 void controllerCorrectRatePID(
-       float rollRateActual, float pitchRateActual, float yawRateActual,
-       float rollRateDesired, float pitchRateDesired, float yawRateDesired);
+       fix_t rollRateActual, fix_t pitchRateActual, fix_t yawRateActual,
+       fix_t rollRateDesired, fix_t pitchRateDesired, fix_t yawRateDesired);
 
 /**
  * Reset controller roll, pitch and yaw PID's.

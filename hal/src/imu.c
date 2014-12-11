@@ -44,6 +44,7 @@
 #include "uart.h"
 #include "param.h"
 #include "log.h"
+#include "fix.h"
 
 #define IMU_ENABLE_MAG_HMC5883
 #define IMU_ENABLE_PRESSURE_MS5611
@@ -53,7 +54,7 @@
 #define IMU_DEG_PER_LSB_CFG   MPU6050_DEG_PER_LSB_2000
 #define IMU_ACCEL_FS_CFG      MPU6050_ACCEL_FS_8
 #define IMU_G_PER_LSB_CFG     MPU6050_G_PER_LSB_8
-#define IMU_1G_RAW            (int16_t)(1.0 / MPU6050_G_PER_LSB_8)
+#define IMU_1G_RAW            (int16_t)(1.0k / MPU6050_G_PER_LSB_8)
 
 #define IMU_STARTUP_TIME_MS   1000
 
@@ -72,7 +73,7 @@
 #define GYRO_VARIANCE_THRESHOLD_Z (GYRO_VARIANCE_BASE)
 
 #define MAG_GAUSS_PER_LSB_CFG    HMC5883L_GAIN_660
-#define MAG_GAUSS_PER_LSB        660.0
+#define MAG_GAUSS_PER_LSB        660.0k
 
 
 typedef struct
@@ -102,10 +103,10 @@ static bool isHmc5883lTestPassed;
 static bool isMs5611TestPassed;
 
 // Pre-calculated values for accelerometer alignment
-static float cosPitch;
-static float sinPitch;
-static float cosRoll;
-static float sinRoll;
+static fix_t cosPitch;
+static fix_t sinPitch;
+static fix_t cosRoll;
+static fix_t sinRoll;
 
 /**
  * MPU6050 selt test function. If the chip is moved to much during the self test
@@ -210,10 +211,10 @@ void imu6Init(void)
   varianceSampleTime = -GYRO_MIN_BIAS_TIMEOUT_MS + 1;
   imuAccLpfAttFactor = IMU_ACC_IIR_LPF_ATT_FACTOR;
 
-  cosPitch = cos(configblockGetCalibPitch() * M_PI/180);
-  sinPitch = sin(configblockGetCalibPitch() * M_PI/180);
-  cosRoll = cos(configblockGetCalibRoll() * M_PI/180);
-  sinRoll = sin(configblockGetCalibRoll() * M_PI/180);
+  cosPitch = cosfix(FIX(configblockGetCalibPitch()) * (M_PI_FIX/180.0k));
+  sinPitch = sinfix(FIX(configblockGetCalibPitch()) * (M_PI_FIX/180.0k));
+  cosRoll = cosfix(FIX(configblockGetCalibRoll()) * (M_PI_FIX/180.0k));
+  sinRoll = sinfix(FIX(configblockGetCalibRoll()) * (M_PI_FIX/180.0k));
 
   isInit = TRUE;
 }
@@ -312,15 +313,15 @@ void imu9Read(Axis3f* gyroOut, Axis3f* accOut, Axis3f* magOut)
   if (isHmc5883lPresent)
   {
     hmc5883lGetHeading(&mag.x, &mag.y, &mag.z);
-    magOut->x = (float)mag.x / MAG_GAUSS_PER_LSB;
-    magOut->y = (float)mag.y / MAG_GAUSS_PER_LSB;
-    magOut->z = (float)mag.z / MAG_GAUSS_PER_LSB;
+    magOut->x = (fix_t)mag.x * (1.0k / MAG_GAUSS_PER_LSB);
+    magOut->y = (fix_t)mag.y * (1.0k / MAG_GAUSS_PER_LSB);
+    magOut->z = (fix_t)mag.z * (1.0k / MAG_GAUSS_PER_LSB);
   }
   else
   {
-    magOut->x = 0.0;
-    magOut->y = 0.0;
-    magOut->z = 0.0;
+    magOut->x = 0.0k;
+    magOut->y = 0.0k;
+    magOut->z = 0.0k;
   }
 }
 

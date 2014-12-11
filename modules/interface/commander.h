@@ -27,6 +27,7 @@
 #define COMMANDER_H_
 #include <stdint.h>
 #include <stdbool.h>
+#include "fix.h"
 
 #define COMMANDER_WDT_TIMEOUT_STABALIZE  M2T(500)
 #define COMMANDER_WDT_TIMEOUT_SHUTDOWN   M2T(2000)
@@ -42,9 +43,9 @@ void commanderInit(void);
 bool commanderTest(void);
 void commanderWatchdog(void);
 uint32_t commanderGetInactivityTime(void);
-void commanderGetRPY(float* eulerRollDesired, float* eulerPitchDesired, float* eulerYawDesired);
+void commanderGetRPY(fix_t* eulerRollDesired, fix_t* eulerPitchDesired, fix_t* eulerYawDesired);
 void commanderGetRPYType(RPYType* rollType, RPYType* pitchType, RPYType* yawType);
-void commanderGetThrust(float* thrust);
+void commanderGetThrust(fix_t* thrust);
 void commanderGetAltHold(bool* altHold, bool* setAltHold, float* altHoldChange);
 
 #endif /* COMMANDER_H_ */

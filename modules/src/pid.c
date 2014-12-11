@@ -33,7 +33,7 @@
 #include "led.h"
 #include "motors.h"
 
-static float wrapAngle(float angle)
+static fix_t wrapAngle(fix_t angle)
 {
   while (angle >= 180.0f)
     angle -= 360.0f;
@@ -42,8 +42,8 @@ static float wrapAngle(float angle)
   return angle;
 }
 
-void pidInit(PidObject* pid, const float desired, const float kp,
-             const float ki, const float kd, const float dt)
+void pidInit(PidObject* pid, const fix_t desired, const fix_t kp,
+             const fix_t ki, const fix_t kd, const fix_t dt)
 {
   pid->error     = 0;
   pid->prevError = 0;
@@ -55,9 +55,10 @@ void pidInit(PidObject* pid, const float desired, const float kp,
   pid->kd = kd;
   pid->iLimit    = DEFAULT_PID_INTEGRATION_LIMIT;
   pid->dt        = dt;
+  pid->dt        = 1.0k / dt;
 }
 
-void pidUpdate(PidObject* pid, const float measured, const bool updateError)
+void pidUpdate(PidObject* pid, const fix_t measured, const bool updateError)
 {
     if (updateError)
     {
@@ -75,14 +76,14 @@ void pidUpdate(PidObject* pid, const float measured, const bool updateError)
         pid->integ = -pid->iLimit;
     }
 
-    pid->deriv = (pid->error - pid->prevError) / pid->dt;
+    pid->deriv = (sat_fix_t) (pid->error - pid->prevError) * (sat_fix_t) pid->idt;
 
-    pid->outP = pid->kp * pid->error;
-    pid->outI = pid->ki * pid->integ;
-    pid->outD = pid->kd * pid->deriv;
+    pid->outP = (sat_fix_t) pid->kp * (sat_fix_t) pid->error;
+    pid->outI = (sat_fix_t) pid->ki * (sat_fix_t) pid->integ;
+    pid->outD = (sat_fix_t) pid->kd * (sat_fix_t) pid->deriv;
 }
 
-void pidUpdate360(PidObject* pid, const float measured, const bool updateError)
+void pidUpdate360(PidObject* pid, const fix_t measured, const bool updateError)
 {
     if (updateError)
     {
@@ -100,19 +101,19 @@ void pidUpdate360(PidObject* pid, const float measured, const bool updateError)
         pid->integ = -pid->iLimit;
     }
 
-    pid->deriv = wrapAngle(pid->error - pid->prevError) / pid->dt;
+    pid->deriv = (sat_fix_t) wrapAngle(pid->error - pid->prevError) * (sat_fix_t) pid->idt;
 
-    pid->outP = pid->kp * pid->error;
-    pid->outI = pid->ki * pid->integ;
-    pid->outD = pid->kd * pid->deriv;
+    pid->outP = (sat_fix_t) pid->kp * (sat_fix_t) pid->error;
+    pid->outI = (sat_fix_t) pid->ki * (sat_fix_t) pid->integ;
+    pid->outD = (sat_fix_t) pid->kd * (sat_fix_t) pid->deriv;
 }
 
-float pidGetOutput(PidObject* pid)
+fix_t pidGetOutput(PidObject* pid)
 {
-    return pid->outP + pid->outI + pid->outD;
+    return (sat_fix_t) pid->outP + (sat_fix_t) pid->outI + (sat_fix_t) pid->outD;
 }
 
-void pidSetIntegralLimit(PidObject* pid, const float limit) {
+void pidSetIntegralLimit(PidObject* pid, const fix_t limit) {
     pid->iLimit = limit;
 }
 
@@ -125,17 +126,17 @@ void pidReset(PidObject* pid)
   pid->deriv     = 0;
 }
 
-void pidSetError(PidObject* pid, const float error)
+void pidSetError(PidObject* pid, const fix_t error)
 {
   pid->error = error;
 }
 
-void pidSetDesired(PidObject* pid, const float desired)
+void pidSetDesired(PidObject* pid, const fix_t desired)
 {
   pid->desired = desired;
 }
 
-float pidGetDesired(PidObject* pid)
+fix_t pidGetDesired(PidObject* pid)
 {
   return pid->desired;
 }
@@ -144,7 +145,7 @@ bool pidIsActive(PidObject* pid)
 {
   bool isActive = TRUE;
 
-  if (pid->kp < 0.0001f && pid->ki < 0.0001f && pid->kd < 0.0001f)
+  if (pid->kp < 0.0001k && pid->ki < 0.0001k && pid->kd < 0.0001k)
   {
     isActive = FALSE;
   }
@@ -152,20 +153,21 @@ bool pidIsActive(PidObject* pid)
   return isActive;
 }
 
-void pidSetKp(PidObject* pid, const float kp)
+void pidSetKp(PidObject* pid, const fix_t kp)
 {
   pid->kp = kp;
 }
 
-void pidSetKi(PidObject* pid, const float ki)
+void pidSetKi(PidObject* pid, const fix_t ki)
 {
   pid->ki = ki;
 }
 
-void pidSetKd(PidObject* pid, const float kd)
+void pidSetKd(PidObject* pid, const fix_t kd)
 {
   pid->kd = kd;
 }
-void pidSetDt(PidObject* pid, const float dt) {
+
+void pidSetDt(PidObject* pid, const fix_t dt) {
     pid->dt = dt;
 }

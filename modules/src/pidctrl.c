@@ -31,6 +31,7 @@
 #include "crtp.h"
 #include "pidctrl.h"
 #include "pid.h"
+#include "fix.h"
 
 typedef enum {
   pidCtrlValues = 0x00,
@@ -38,7 +39,7 @@ typedef enum {
 
 void pidCrtlTask(void *param);
 
-void pidCtrlInit()
+void pidCtrlInit(void)
 {
   xTaskCreate(pidCrtlTask, (const signed char * const)"PIDCrtl",
               configMINIMAL_STACK_SIZE, NULL, /*priority*/2, NULL);
@@ -82,24 +83,24 @@ void pidCrtlTask(void *param)
         case pidCtrlValues:
           pPid = (struct pidValues *)p.data;
           {
-            pidSetKp(&pidRollRate, (float)pPid->rateKpRP/100.0f);
-            pidSetKi(&pidRollRate, (float)pPid->rateKiRP/100.0f);
-            pidSetKd(&pidRollRate, (float)pPid->rateKdRP/100.0f);
-            pidSetKp(&pidRoll, (float)pPid->attKpRP/100.0f);
-            pidSetKi(&pidRoll, (float)pPid->attKiRP/100.0f);
-            pidSetKd(&pidRoll, (float)pPid->attKdRP/100.0f);
-            pidSetKp(&pidPitchRate, (float)pPid->rateKpRP/100.0f);
-            pidSetKi(&pidPitchRate, (float)pPid->rateKiRP/100.0f);
-            pidSetKd(&pidPitchRate, (float)pPid->rateKdRP/100.0f);
-            pidSetKp(&pidPitch, (float)pPid->attKpRP/100.0f);
-            pidSetKi(&pidPitch, (float)pPid->attKiRP/100.0f);
-            pidSetKd(&pidPitch, (float)pPid->attKdRP/100.0f);
-            pidSetKp(&pidYawRate, (float)pPid->rateKpY/100.0f);
-            pidSetKi(&pidYawRate, (float)pPid->rateKiY/100.0f);
-            pidSetKd(&pidYawRate, (float)pPid->rateKdY/100.0f);
-            pidSetKp(&pidYaw, (float)pPid->attKpY/100.0f);
-            pidSetKi(&pidYaw, (float)pPid->attKiY/100.0f);
-            pidSetKd(&pidYaw, (float)pPid->attKdY/100.0f);
+            pidSetKp(&pidRollRate, (fix_t)pPid->rateKpRP*0.01k);
+            pidSetKi(&pidRollRate, (fix_t)pPid->rateKiRP*0.01k);
+            pidSetKd(&pidRollRate, (fix_t)pPid->rateKdRP*0.01k);
+            pidSetKp(&pidRoll, (fix_t)pPid->attKpRP*0.01k);
+            pidSetKi(&pidRoll, (fix_t)pPid->attKiRP*0.01k);
+            pidSetKd(&pidRoll, (fix_t)pPid->attKdRP*0.01k);
+            pidSetKp(&pidPitchRate, (fix_t)pPid->rateKpRP*0.01k);
+            pidSetKi(&pidPitchRate, (fix_t)pPid->rateKiRP*0.01k);
+            pidSetKd(&pidPitchRate, (fix_t)pPid->rateKdRP*0.01k);
+            pidSetKp(&pidPitch, (fix_t)pPid->attKpRP*0.01k);
+            pidSetKi(&pidPitch, (fix_t)pPid->attKiRP*0.01k);
+            pidSetKd(&pidPitch, (fix_t)pPid->attKdRP*0.01k);
+            pidSetKp(&pidYawRate, (fix_t)pPid->rateKpY*0.01k);
+            pidSetKi(&pidYawRate, (fix_t)pPid->rateKiY*0.01k);
+            pidSetKd(&pidYawRate, (fix_t)pPid->rateKdY*0.01k);
+            pidSetKp(&pidYaw, (fix_t)pPid->attKpY*0.01k);
+            pidSetKi(&pidYaw, (fix_t)pPid->attKiY*0.01k);
+            pidSetKd(&pidYaw, (fix_t)pPid->attKdY*0.01k);
           }
           break;
         default:

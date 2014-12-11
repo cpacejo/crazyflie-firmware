@@ -27,6 +27,7 @@
 #ifndef IMU_H_
 #define IMU_H_
 #include <stdbool.h>
+#include "fix.h"
 #include "filter.h"
 #include "imu_types.h"
 
@@ -34,7 +35,7 @@
  * IMU update frequency dictates the overall update frequency.
  */
 #define IMU_UPDATE_FREQ   500
-#define IMU_UPDATE_DT     (float)(1.0/IMU_UPDATE_FREQ)
+#define IMU_UPDATE_DT     (fix_t)(1.0k/IMU_UPDATE_FREQ)
 
 /**
  * Set ACC_WANTED_LPF1_CUTOFF_HZ to the wanted cut-off freq in Hz.
@@ -48,8 +49,8 @@
  * f0 = fs / 2*pi*attenuation ->
  * attenuation = fs / 2*pi*f0
  */
-#define IMU_ACC_IIR_LPF_ATTENUATION (IMU_UPDATE_FREQ / (2 * 3.1415 * IMU_ACC_WANTED_LPF_CUTOFF_HZ))
-#define IMU_ACC_IIR_LPF_ATT_FACTOR  (int)(((1<<IIR_SHIFT) / IMU_ACC_IIR_LPF_ATTENUATION) + 0.5)
+#define IMU_ACC_IIR_LPF_ATTENUATION (IMU_UPDATE_FREQ / (2.0k * 3.1415k * IMU_ACC_WANTED_LPF_CUTOFF_HZ))
+#define IMU_ACC_IIR_LPF_ATT_FACTOR  (int)(((1.0k<<IIR_SHIFT) / IMU_ACC_IIR_LPF_ATTENUATION) + 0.5k)
 
 void imu6Init(void);
 bool imu6Test(void);
@@ -58,7 +59,5 @@ void imu9Read(Axis3f* gyroOut, Axis3f* accOut, Axis3f* magOut);
 bool imu6IsCalibrated(void);
 bool imuHasBarometer(void);
 bool imuHasMangnetometer(void);
-
-
 
 #endif /* IMU_H_ */

@@ -32,6 +32,7 @@
 #include "stm32f10x_conf.h"
 #include "FreeRTOS.h"
 #include "task.h"
+#include "fix.h"
 
 // TA: Maybe not so good to bring in these dependencies...
 #include "debug.h"
@@ -83,18 +84,18 @@ bool mpu6050TestConnection()
 /** Do a MPU6050 self test.
  * @return True if self test passed, false otherwise
  */
-bool mpu6050SelfTest()
+bool mpu6050SelfTest(void)
 {
   bool testStatus = TRUE;
   int16_t axi16, ayi16, azi16;
   int16_t gxi16, gyi16, gzi16;
-  float axf, ayf, azf;
-  float gxf, gyf, gzf;
-  float axfTst, ayfTst, azfTst;
-  float gxfTst, gyfTst, gzfTst;
-  float axfDiff, ayfDiff, azfDiff;
-  float gxfDiff, gyfDiff, gzfDiff;
-  float gRange, aRange;
+  fix_t axf, ayf, azf;
+  fix_t gxf, gyf, gzf;
+  fix_t axfTst, ayfTst, azfTst;
+  fix_t gxfTst, gyfTst, gzfTst;
+  fix_t axfDiff, ayfDiff, azfDiff;
+  fix_t gxfDiff, gyfDiff, gzfDiff;
+  fix_t gRange, aRange;
   uint32_t scrap;
 
   aRange = mpu6050GetFullScaleAccelGPL();
@@ -174,12 +175,12 @@ bool mpu6050SelfTest()
  * @param string A pointer to a string describing the value.
  * @return True if self test within low - high limit, false otherwise
  */
-bool mpu6050EvaluateSelfTest(float low, float high, float value, char* string)
+bool mpu6050EvaluateSelfTest(fix_t low, fix_t high, fix_t value, char* string)
 {
   if (value < low || value > high)
   {
     DEBUG_PRINT("Self test %s [FAIL]. low: %0.2f, high: %0.2f, measured: %0.2f\n",
-                string, low, high, value);
+                string, (float) low, (float) high, (float) value);
     return FALSE;
   }
   return TRUE;
@@ -368,16 +369,16 @@ uint8_t mpu6050GetFullScaleGyroRangeId()
 
 /** Get full-scale gyroscope degrees per LSB.
  *
- * @return float of current full-scale gyroscope setting as degrees per LSB
+ * @return fix_t of current full-scale gyroscope setting as degrees per LSB
  * @see MPU6050_GYRO_FS_250
  * @see MPU6050_RA_GYRO_CONFIG
  * @see MPU6050_GCONFIG_FS_SEL_BIT
  * @see MPU6050_GCONFIG_FS_SEL_LENGTH
  */
-float mpu6050GetFullScaleGyroDPL()
+fix_t mpu6050GetFullScaleGyroDPL(void)
 {
   int32_t rangeId;
-  float range;
+  fix_t range;
 
   rangeId = mpu6050GetFullScaleGyroRangeId();
   switch (rangeId)
@@ -510,16 +511,16 @@ uint8_t mpu6050GetFullScaleAccelRangeId()
 
 /** Get full-scale accelerometer G per LSB.
  *
- * @return float of current full-scale accelerometer setting as G per LSB
+ * @return fix_t of current full-scale accelerometer setting as G per LSB
  * @see MPU6050_ACCEL_FS_2
  * @see MPU6050_RA_ACCEL_CONFIG
  * @see MPU6050_ACONFIG_AFS_SEL_BIT
  * @see MPU6050_ACONFIG_AFS_SEL_LENGTH
  */
-float mpu6050GetFullScaleAccelGPL()
+fix_t mpu6050GetFullScaleAccelGPL(void)
 {
   int32_t rangeId;
-  float range;
+  fix_t range;
 
   rangeId = mpu6050GetFullScaleAccelRangeId();
   switch (rangeId)

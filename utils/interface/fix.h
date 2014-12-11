@@ -31,6 +31,7 @@
 #include <math.h>  // for constants
 
 typedef accum fix_t;  // suffix is k
+typedef sat accum sat_fix_t;
 
 #define FIX_MIN (-0xFFFF.FFFFk)
 #define FIX_MAX 0xFFFF.FFFFk

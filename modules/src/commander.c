@@ -33,8 +33,10 @@
 #include "configblock.h"
 #include "param.h"
 
-#define MIN_THRUST  10000
-#define MAX_THRUST  60000
+#include "fix.h"
+
+#define MIN_THRUST  (10000.0k >> 16)
+#define MAX_THRUST  (60000.0k >> 16)
 
 struct CommanderCrtpValues
 {
@@ -117,13 +119,13 @@ uint32_t commanderGetInactivityTime(void)
   return xTaskGetTickCount() - lastUpdate;
 }
 
-void commanderGetRPY(float* eulerRollDesired, float* eulerPitchDesired, float* eulerYawDesired)
+void commanderGetRPY(fix_t* eulerRollDesired, fix_t* eulerPitchDesired, fix_t* eulerYawDesired)
 {
   int usedSide = side;
 
-  *eulerRollDesired  = targetVal[usedSide].roll;
-  *eulerPitchDesired = targetVal[usedSide].pitch;
-  *eulerYawDesired   = targetVal[usedSide].yaw;
+  *eulerRollDesired  = FIX(targetVal[usedSide].roll);
+  *eulerPitchDesired = FIX(targetVal[usedSide].pitch);
+  *eulerYawDesired   = FIX(targetVal[usedSide].yaw);
 }
 
 void commanderGetAltHold(bool* altHold, bool* setAltHold, float* altHoldChange)
@@ -142,25 +144,15 @@ void commanderGetRPYType(RPYType* rollType, RPYType* pitchType, RPYType* yawType
   *yawType   = CRATE;
 }
 
-void commanderGetThrust(float* thrust)
+// scale thrust down so we don't overflow fix_t
+void commanderGetThrust(fix_t* thrustOut)
 {
-  int usedSide = side;
-  uint16_t rawThrust = targetVal[usedSide].thrust;
-
-  if (rawThrust > MIN_THRUST)
-  {
-    *thrust = rawThrust;
-  }
-  else
-  {
-    *thrust = 0;
-  }
-
-  if (rawThrust > MAX_THRUST)
-  {
-    *thrust = MAX_THRUST;
-  }
-
+  // for some reason (fix_t) (uint16_t) doesn't work?
+  // acts as (fix_t) (int16_t) (uint16_t)
+  const fix_t thrust = (fix_t) (targetVal[side].thrust >> 1) >> 15;
+  if (thrust < MIN_THRUST) *thrustOut = 0.0k;
+  else if (thrust > MAX_THRUST) *thrustOut = MAX_THRUST;
+  else *thrustOut = thrust;
   commanderWatchdog();
 }
 
@@ -168,4 +160,3 @@ void commanderGetThrust(float* thrust)
 PARAM_GROUP_START(flightmode)
 PARAM_ADD(PARAM_UINT8, althold, &altHoldMode)
 PARAM_GROUP_STOP(flightmode)
-

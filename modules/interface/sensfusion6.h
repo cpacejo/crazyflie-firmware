@@ -26,13 +26,14 @@
 #ifndef SENSORFUSION6_H_
 #define SENSORFUSION6_H_
 #include <stdbool.h>
+#include "fix.h"
 
 void sensfusion6Init(void);
 bool sensfusion6Test(void);
 
-void sensfusion6UpdateQ(float gx, float gy, float gz, float ax, float ay, float az, float dt);
-void sensfusion6GetEulerRPY(float* roll, float* pitch, float* yaw);
-float sensfusion6GetAccZWithoutGravity(const float ax, const float ay, const float az);
+void sensfusion6UpdateQ(fix_t gx, fix_t gy, fix_t gz, fix_t ax, fix_t ay, fix_t az, fix_t dt);
+void sensfusion6GetEulerRPY(fix_t* roll, fix_t* pitch, fix_t* yaw);
+fix_t sensfusion6GetAccZWithoutGravity(const fix_t ax, const fix_t ay, const fix_t az);
 
 
 #endif /* SENSORFUSION6_H_ */

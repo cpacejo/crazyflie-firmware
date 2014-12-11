@@ -32,6 +32,7 @@ THE SOFTWARE.
 #define _MPU6050_H_
 
 #include "i2cdev.h"
+#include "fix.h"
 
 #define MPU6050_ADDRESS_AD0_LOW     0x68 // address pin low (GND), default for InvenSense evaluation board
 #define MPU6050_ADDRESS_AD0_HIGH    0x69 // address pin high (VCC)
@@ -407,20 +408,20 @@ THE SOFTWARE.
 #define MPU6050_DMP_MEMORY_BANK_SIZE    256
 #define MPU6050_DMP_MEMORY_CHUNK_SIZE   16
 
-#define MPU6050_DEG_PER_LSB_250  (float)((2 * 250.0) / 65536.0)
-#define MPU6050_DEG_PER_LSB_500  (float)((2 * 500.0) / 65536.0)
-#define MPU6050_DEG_PER_LSB_1000 (float)((2 * 1000.0) / 65536.0)
-#define MPU6050_DEG_PER_LSB_2000 (float)((2 * 2000.0) / 65536.0)
+#define MPU6050_DEG_PER_LSB_250  ((2.0k * 250.0k) >> 16)
+#define MPU6050_DEG_PER_LSB_500  ((2.0k * 500.0k) >> 16)
+#define MPU6050_DEG_PER_LSB_1000 ((2.0k * 1000.0k) >> 16)
+#define MPU6050_DEG_PER_LSB_2000 ((2.0k * 2000.0k) >> 16)
 
-#define MPU6050_G_PER_LSB_2      (float)((2 * 2) / 65536.0)
-#define MPU6050_G_PER_LSB_4      (float)((2 * 4) / 65536.0)
-#define MPU6050_G_PER_LSB_8      (float)((2 * 8) / 65536.0)
-#define MPU6050_G_PER_LSB_16     (float)((2 * 16) / 65536.0)
+#define MPU6050_G_PER_LSB_2      ((2.0k * 2.0k) >> 16)
+#define MPU6050_G_PER_LSB_4      ((2.0k * 4.0k) >> 16)
+#define MPU6050_G_PER_LSB_8      ((2.0k * 8.0k) >> 16)
+#define MPU6050_G_PER_LSB_16     ((2.0k * 16.0k) >> 16)
 
-#define MPU6050_ST_GYRO_LOW      10.0   // deg/s
-#define MPU6050_ST_GYRO_HIGH     105.0  // deg/s
-#define MPU6050_ST_ACCEL_LOW     0.300  // G
-#define MPU6050_ST_ACCEL_HIGH    0.950  // G
+#define MPU6050_ST_GYRO_LOW      10.0k   // deg/s
+#define MPU6050_ST_GYRO_HIGH     105.0k  // deg/s
+#define MPU6050_ST_ACCEL_LOW     0.300k  // G
+#define MPU6050_ST_ACCEL_HIGH    0.950k  // G
 
 // note: DMP code memory blocks defined at end of header file
 
@@ -428,8 +429,8 @@ void mpu6050Init(I2C_TypeDef *i2cPort);
 bool mpu6050Test(void);
 
 bool mpu6050TestConnection();
-bool mpu6050EvaluateSelfTest(float low, float high, float value, char* string);
-bool mpu6050SelfTest();
+bool mpu6050EvaluateSelfTest(fix_t low, fix_t high, fix_t value, char* string);
+bool mpu6050SelfTest(void);
 
 
 // AUX_VDDIO register
@@ -451,7 +452,7 @@ void mpu6050SetGyroXSelfTest(bool enabled);
 void mpu6050SetGyroYSelfTest(bool enabled);
 void mpu6050SetGyroZSelfTest(bool enabled);
 uint8_t mpu6050GetFullScaleGyroRangeId();
-float mpu6050GetFullScaleGyroDPL();
+fix_t mpu6050GetFullScaleGyroDPL(void);
 void mpu6050SetFullScaleGyroRange(uint8_t range);
 
 // ACCEL_CONFIG register
@@ -463,7 +464,7 @@ bool mpu6050GetAccelZSelfTest();
 void mpu6050SetAccelZSelfTest(bool enabled);
 uint8_t mpu6050GetFullScaleAccelRangeId();
 void mpu6050SetFullScaleAccelRange(uint8_t range);
-float mpu6050GetFullScaleAccelGPL();
+fix_t mpu6050GetFullScaleAccelGPL(void);
 uint8_t mpu6050GetDHPFMode();
 void mpu6050SetDHPFMode(uint8_t mode);
 

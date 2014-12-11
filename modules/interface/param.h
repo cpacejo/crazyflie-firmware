@@ -49,9 +49,10 @@ struct param_s {
 
 #define PARAM_TYPE_INT   (0x00<<2)
 #define PARAM_TYPE_FLOAT (0x01<<2)
+#define PARAM_TYPE_FIX   (0x02<<2)
 
-#define PARAM_SIGNED (0x00<<3)
-#define PARAM_UNSIGNED (0x01<<3)
+#define PARAM_SIGNED (0x00<<4)
+#define PARAM_UNSIGNED (0x01<<4)
 
 #define PARAM_VARIABLE (0x00<<7)
 #define PARAM_GROUP    (0x01<<7)
@@ -72,6 +73,7 @@ struct param_s {
 #define PARAM_INT32  (PARAM_4BYTES | PARAM_TYPE_INT | PARAM_SIGNED)
 
 #define PARAM_FLOAT (PARAM_4BYTES | PARAM_TYPE_FLOAT | PARAM_SIGNED)
+#define PARAM_FIX   (PARAM_4BYTES | PARAM_TYPE_FIX | PARAM_SIGNED)
 
 /* Macros */
 #define PARAM_ADD(TYPE, NAME, ADDRESS) \

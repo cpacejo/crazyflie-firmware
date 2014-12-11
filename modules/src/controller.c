@@ -24,6 +24,7 @@
  *
  */
 #include <stdbool.h>
+#include "fix.h"
  
 #include "stm32f10x_conf.h"
 #include "FreeRTOS.h"
@@ -32,10 +33,11 @@
 #include "controller.h"
 #include "pid.h"
 #include "param.h"
+#include "log.h"
 #include "imu.h"
 
 //Better semantic
-#define SATURATE_SINT16(in) ({ __typeof__(in) _in = (in); (_in<INT16_MIN)?INT16_MIN:((_in>INT16_MAX)?INT16_MAX:_in); })
+#define SATURATE_SINT16(in) ({ __typeof__(in) _in = (in); (_in<-32767)?-32767:((_in>32767)?32767:(int16_t)_in); })
 
 //Fancier version
 #define TRUNCATE_SINT16(out, in) ({ (out) = SATURATE_SINT16(in); })
@@ -53,7 +55,7 @@ int16_t yawOutput;
 
 static bool isInit;
 
-static float limitSlew(const float rate, const float maxRate)
+static fix_t limitSlew(const fix_t rate, const fix_t maxRate)
 {
   if (rate > maxRate) return maxRate;
   if (rate < -maxRate) return -maxRate;
@@ -89,8 +91,8 @@ bool controllerTest(void)
 }
 
 void controllerCorrectRatePID(
-       float rollRateActual, float pitchRateActual, float yawRateActual,
-       float rollRateDesired, float pitchRateDesired, float yawRateDesired)
+       fix_t rollRateActual, fix_t pitchRateActual, fix_t yawRateActual,
+       fix_t rollRateDesired, fix_t pitchRateDesired, fix_t yawRateDesired)
 {
   pidSetDesired(&pidRollRate, rollRateDesired);
   pidUpdate(&pidRollRate, rollRateActual, TRUE);
@@ -106,9 +108,9 @@ void controllerCorrectRatePID(
 }
 
 void controllerCorrectAttitudePID(
-       float eulerRollActual, float eulerPitchActual, float eulerYawActual,
-       float eulerRollDesired, float eulerPitchDesired, float eulerYawDesired,
-       float* rollRateDesired, float* pitchRateDesired, float* yawRateDesired)
+       fix_t eulerRollActual, fix_t eulerPitchActual, fix_t eulerYawActual,
+       fix_t eulerRollDesired, fix_t eulerPitchDesired, fix_t eulerYawDesired,
+       fix_t* rollRateDesired, fix_t* pitchRateDesired, fix_t* yawRateDesired)
 {
   // FIXME: do we need to limit slew?
 
@@ -146,25 +148,25 @@ void controllerGetActuatorOutput(int16_t* roll, int16_t* pitch, int16_t* yaw)
 }
 
 PARAM_GROUP_START(pid_attitude)
-PARAM_ADD(PARAM_FLOAT, roll_kp, &pidRoll.kp)
-PARAM_ADD(PARAM_FLOAT, roll_ki, &pidRoll.ki)
-PARAM_ADD(PARAM_FLOAT, roll_kd, &pidRoll.kd)
-PARAM_ADD(PARAM_FLOAT, pitch_kp, &pidPitch.kp)
-PARAM_ADD(PARAM_FLOAT, pitch_ki, &pidPitch.ki)
-PARAM_ADD(PARAM_FLOAT, pitch_kd, &pidPitch.kd)
-PARAM_ADD(PARAM_FLOAT, yaw_kp, &pidYaw.kp)
-PARAM_ADD(PARAM_FLOAT, yaw_ki, &pidYaw.ki)
-PARAM_ADD(PARAM_FLOAT, yaw_kd, &pidYaw.kd)
+PARAM_ADD(PARAM_FIX, roll_kp, &pidRoll.kp)
+PARAM_ADD(PARAM_FIX, roll_ki, &pidRoll.ki)
+PARAM_ADD(PARAM_FIX, roll_kd, &pidRoll.kd)
+PARAM_ADD(PARAM_FIX, pitch_kp, &pidPitch.kp)
+PARAM_ADD(PARAM_FIX, pitch_ki, &pidPitch.ki)
+PARAM_ADD(PARAM_FIX, pitch_kd, &pidPitch.kd)
+PARAM_ADD(PARAM_FIX, yaw_kp, &pidYaw.kp)
+PARAM_ADD(PARAM_FIX, yaw_ki, &pidYaw.ki)
+PARAM_ADD(PARAM_FIX, yaw_kd, &pidYaw.kd)
 PARAM_GROUP_STOP(pid_attitude)
 
 PARAM_GROUP_START(pid_rate)
-PARAM_ADD(PARAM_FLOAT, roll_kp, &pidRollRate.kp)
-PARAM_ADD(PARAM_FLOAT, roll_ki, &pidRollRate.ki)
-PARAM_ADD(PARAM_FLOAT, roll_kd, &pidRollRate.kd)
-PARAM_ADD(PARAM_FLOAT, pitch_kp, &pidPitchRate.kp)
-PARAM_ADD(PARAM_FLOAT, pitch_ki, &pidPitchRate.ki)
-PARAM_ADD(PARAM_FLOAT, pitch_kd, &pidPitchRate.kd)
-PARAM_ADD(PARAM_FLOAT, yaw_kp, &pidYawRate.kp)
-PARAM_ADD(PARAM_FLOAT, yaw_ki, &pidYawRate.ki)
-PARAM_ADD(PARAM_FLOAT, yaw_kd, &pidYawRate.kd)
+PARAM_ADD(PARAM_FIX, roll_kp, &pidRollRate.kp)
+PARAM_ADD(PARAM_FIX, roll_ki, &pidRollRate.ki)
+PARAM_ADD(PARAM_FIX, roll_kd, &pidRollRate.kd)
+PARAM_ADD(PARAM_FIX, pitch_kp, &pidPitchRate.kp)
+PARAM_ADD(PARAM_FIX, pitch_ki, &pidPitchRate.ki)
+PARAM_ADD(PARAM_FIX, pitch_kd, &pidPitchRate.kd)
+PARAM_ADD(PARAM_FIX, yaw_kp, &pidYawRate.kp)
+PARAM_ADD(PARAM_FIX, yaw_ki, &pidYawRate.ki)
+PARAM_ADD(PARAM_FIX, yaw_kd, &pidYawRate.kd)
 PARAM_GROUP_STOP(pid_rate)

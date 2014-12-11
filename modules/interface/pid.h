@@ -28,58 +28,60 @@
 #define PID_H_
 
 #include <stdbool.h>
+#include "fix.h"
 
-#define PID_ROLL_RATE_KP  70.0f
-#define PID_ROLL_RATE_KI  0.0f
-#define PID_ROLL_RATE_KD  0.0f
-#define PID_ROLL_RATE_INTEGRATION_LIMIT    100.0f
+#define PID_ROLL_RATE_KP  70.0k
+#define PID_ROLL_RATE_KI  0.0k
+#define PID_ROLL_RATE_KD  0.0k
+#define PID_ROLL_RATE_INTEGRATION_LIMIT    100.0k
 
-#define PID_PITCH_RATE_KP  70.0f
-#define PID_PITCH_RATE_KI  0.0f
-#define PID_PITCH_RATE_KD  0.0f
-#define PID_PITCH_RATE_INTEGRATION_LIMIT   100.0f
+#define PID_PITCH_RATE_KP  70.0k
+#define PID_PITCH_RATE_KI  0.0k
+#define PID_PITCH_RATE_KD  0.0k
+#define PID_PITCH_RATE_INTEGRATION_LIMIT   100.0k
 
-#define PID_YAW_RATE_KP  50.0f
-#define PID_YAW_RATE_KI  0.0f
-#define PID_YAW_RATE_KD  0.0f
-#define PID_YAW_RATE_INTEGRATION_LIMIT     500.0f
+#define PID_YAW_RATE_KP  50.0k
+#define PID_YAW_RATE_KI  0.0k
+#define PID_YAW_RATE_KD  0.0k
+#define PID_YAW_RATE_INTEGRATION_LIMIT     500.0k
 
-#define PID_ROLL_KP  3.5f
-#define PID_ROLL_KI  0.0f
-#define PID_ROLL_KD  0.0f
-#define PID_ROLL_INTEGRATION_LIMIT    20.0f
-#define PID_ROLL_MAX_SLEW  300.0f
+#define PID_ROLL_KP  3.5k
+#define PID_ROLL_KI  0.0k
+#define PID_ROLL_KD  0.0k
+#define PID_ROLL_INTEGRATION_LIMIT    20.0k
+#define PID_ROLL_MAX_SLEW  300.0k
 
-#define PID_PITCH_KP  3.5f
-#define PID_PITCH_KI  0.0f
-#define PID_PITCH_KD  0.0f
-#define PID_PITCH_INTEGRATION_LIMIT   20.0f
-#define PID_PITCH_MAX_SLEW  300.0f
+#define PID_PITCH_KP  3.5k
+#define PID_PITCH_KI  0.0k
+#define PID_PITCH_KD  0.0k
+#define PID_PITCH_INTEGRATION_LIMIT   20.0k
+#define PID_PITCH_MAX_SLEW  300.0k
 
-#define PID_YAW_KP  12.0f
-#define PID_YAW_KI  0.0f
-#define PID_YAW_KD  0.0f
-#define PID_YAW_INTEGRATION_LIMIT     360.0f
-#define PID_YAW_MAX_SLEW  1000.0f
+#define PID_YAW_KP  12.0k
+#define PID_YAW_KI  0.0k
+#define PID_YAW_KD  0.0k
+#define PID_YAW_INTEGRATION_LIMIT     360.0k
+#define PID_YAW_MAX_SLEW  1000.0k
 
 
-#define DEFAULT_PID_INTEGRATION_LIMIT  5000.0f
+#define DEFAULT_PID_INTEGRATION_LIMIT  5000.0k
 
 typedef struct
 {
-  float desired;     //< set point
-  float error;        //< error
-  float prevError;    //< previous error
-  float integ;        //< integral
-  float deriv;        //< derivative
-  float kp;           //< proportional gain
-  float ki;           //< integral gain
-  float kd;           //< derivative gain
-  float outP;         //< proportional output (debugging)
-  float outI;         //< integral output (debugging)
-  float outD;         //< derivative output (debugging)
-  float iLimit;       //< integral limit
-  float dt;           //< delta-time dt
+  fix_t desired;     //< set point
+  fix_t error;        //< error
+  fix_t prevError;    //< previous error
+  fix_t integ;        //< integral
+  fix_t deriv;        //< derivative
+  fix_t kp;           //< proportional gain
+  fix_t ki;           //< integral gain
+  fix_t kd;           //< derivative gain
+  fix_t outP;         //< proportional output (debugging)
+  fix_t outI;         //< integral output (debugging)
+  fix_t outD;         //< derivative output (debugging)
+  fix_t iLimit;       //< integral limit
+  fix_t dt;           //< delta-time dt
+  fix_t idt;          //< inverse dt
 } PidObject;
 
 /**
@@ -91,8 +93,8 @@ typedef struct
  * @param[in] ki        The integral gain
  * @param[in] kd        The derivative gain
  */
-void pidInit(PidObject* pid, const float desired, const float kp,
-             const float ki, const float kd, const float dt);
+void pidInit(PidObject* pid, const fix_t desired, const fix_t kp,
+             const fix_t ki, const fix_t kd, const fix_t dt);
 
 /**
  * Set the integral limit for this PID in deg.
@@ -100,7 +102,7 @@ void pidInit(PidObject* pid, const float desired, const float kp,
  * @param[in] pid   A pointer to the pid object.
  * @param[in] limit Pid integral swing limit.
  */
-void pidSetIntegralLimit(PidObject* pid, const float limit);
+void pidSetIntegralLimit(PidObject* pid, const fix_t limit);
 
 /**
  * Reset the PID error values
@@ -118,7 +120,7 @@ void pidReset(PidObject* pid);
  * @param[in] updateError Set to TRUE if error should be calculated.
  *                        Set to False if pidSetError() has been used.
  */
-void pidUpdate(PidObject* pid, const float measured, const bool updateError);
+void pidUpdate(PidObject* pid, const fix_t measured, const bool updateError);
 
 /**
  * Update the PID parameters for a rotational PV.
@@ -128,7 +130,7 @@ void pidUpdate(PidObject* pid, const float measured, const bool updateError);
  * @param[in] updateError Set to TRUE if error should be calculated.
  *                        Set to False if pidSetError() has been used.
  */
-void pidUpdate360(PidObject* pid, const float measured, const bool updateError);
+void pidUpdate360(PidObject* pid, const fix_t measured, const bool updateError);
 
 /**
  * Return the PID output.
@@ -136,7 +138,7 @@ void pidUpdate360(PidObject* pid, const float measured, const bool updateError);
  * @param[in] pid         A pointer to the pid object.
  * @return PID algorithm output
  */
-float pidGetOutput(PidObject* pid);
+fix_t pidGetOutput(PidObject* pid);
 
 /**
  * Set a new set point for the PID to track.
@@ -144,13 +146,13 @@ float pidGetOutput(PidObject* pid);
  * @param[in] pid   A pointer to the pid object.
  * @param[in] angle The new set point
  */
-void pidSetDesired(PidObject* pid, const float desired);
+void pidSetDesired(PidObject* pid, const fix_t desired);
 
 /**
  * Set a new set point for the PID to track.
  * @return The set point
  */
-float pidGetDesired(PidObject* pid);
+fix_t pidGetDesired(PidObject* pid);
 
 /**
  * Find out if PID is active
@@ -164,7 +166,7 @@ bool pidIsActive(PidObject* pid);
  * @param[in] pid   A pointer to the pid object.
  * @param[in] error The new error
  */
-void pidSetError(PidObject* pid, const float error);
+void pidSetError(PidObject* pid, const fix_t error);
 
 /**
  * Set a new proportional gain for the PID.
@@ -172,7 +174,7 @@ void pidSetError(PidObject* pid, const float error);
  * @param[in] pid   A pointer to the pid object.
  * @param[in] kp    The new proportional gain
  */
-void pidSetKp(PidObject* pid, const float kp);
+void pidSetKp(PidObject* pid, const fix_t kp);
 
 /**
  * Set a new integral gain for the PID.
@@ -180,7 +182,7 @@ void pidSetKp(PidObject* pid, const float kp);
  * @param[in] pid   A pointer to the pid object.
  * @param[in] ki    The new integral gain
  */
-void pidSetKi(PidObject* pid, const float ki);
+void pidSetKi(PidObject* pid, const fix_t ki);
 
 /**
  * Set a new derivative gain for the PID.
@@ -188,7 +190,7 @@ void pidSetKi(PidObject* pid, const float ki);
  * @param[in] pid   A pointer to the pid object.
  * @param[in] kd    The derivative gain
  */
-void pidSetKd(PidObject* pid, const float kd);
+void pidSetKd(PidObject* pid, const fix_t kd);
 
 /**
  * Set a new dt gain for the PID. Defaults to IMU_UPDATE_DT upon construction
@@ -196,5 +198,5 @@ void pidSetKd(PidObject* pid, const float kd);
  * @param[in] pid   A pointer to the pid object.
  * @param[in] dt    Delta time
  */
-void pidSetDt(PidObject* pid, const float dt);
+void pidSetDt(PidObject* pid, const fix_t dt);
 #endif /* PID_H_ */
