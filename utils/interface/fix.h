@@ -63,5 +63,6 @@ int floorLog2fix(fix_t x);
 fix_t sinfix(fix_t x);
 fix_t cosfix(fix_t x);
 void sincosfix(fix_t x, fix_t *restrict s, fix_t *restrict c);
+fix_t atan2fix(fix_t y, fix_t x);
 
 #endif

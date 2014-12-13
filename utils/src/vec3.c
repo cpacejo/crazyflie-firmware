@@ -46,6 +46,20 @@ void vec3Scale(const fix_t x, const vec3_t *const y, vec3_t *const out)
   out->z = x * y->z;
 }
 
+void vec3Add(const vec3_t *const x, const vec3_t *const y, vec3_t *const out)
+{
+  out->x = x->x + y->x;
+  out->y = x->y + y->y;
+  out->z = x->z + y->z;
+}
+
+void vec3ScaleAdd(const fix_t x, const vec3_t *const y, const vec3_t *const z, vec3_t *const out)
+{
+  out->x = x * y->x + z->x;
+  out->y = x * y->y + z->y;
+  out->z = x * y->z + z->z;
+}
+
 fix_t vec3Dot(const vec3_t *const x, const vec3_t *const y)
 {
   return x->x * y->x + x->y * y->y + x->z * y->z;

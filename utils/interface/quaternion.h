@@ -26,6 +26,7 @@
 #ifndef QUATERNION_H_
 #define QUATERNION_H_
 #include "fix.h"
+#include "vec3.h"
 
 typedef struct {
   fix_t r, i, j, k;
@@ -35,9 +36,10 @@ typedef struct {
 
 void qUnit(quaternion_t *out);
 // represent a vector as a quaternion
-void qVec(fix_t vx, fix_t vy, fix_t vz, quaternion_t *out);
+void qVec(const vec3_t *v, quaternion_t *out);
 // represent an Euler rotation as a unit quaternion
-void qComp(fix_t angle, fix_t ux, fix_t uy, fix_t uz, quaternion_t *out);
+// equivalent to qInteg0 for unit vectors
+void qComp(fix_t angle, const vec3_t *u, quaternion_t *out);
 void qNeg(const quaternion_t *x, quaternion_t *out);
 void qConj(const quaternion_t *x, quaternion_t *out);
 
@@ -47,21 +49,32 @@ void qScale(fix_t x, const quaternion_t *y, quaternion_t *out);
 // note that qInv(unit) is equivalent to the (faster) qConj(unit)
 void qInv(const quaternion_t *x, quaternion_t *out);
 void qUnitize(const quaternion_t *x, quaternion_t *out);
-void qMul(const quaternion_t *x, const quaternion_t *y, quaternion_t *out);
+void qMul(const quaternion_t *global, const quaternion_t *local, quaternion_t *out);
 // rotate a vector by the given unit quaternion
-void qRot(fix_t vx, fix_t vy, fix_t vz, const quaternion_t *x,
-          fix_t *out_vx, fix_t *out_vy, fix_t *out_vz);
+void qRot(const vec3_t *v, const quaternion_t *x, vec3_t *out);
+void qRotX(const quaternion_t *x, vec3_t *out);
+void qRotY(const quaternion_t *x, vec3_t *out);
+void qRotZ(const quaternion_t *x, vec3_t *out);
+// what is the angle by which the given vector will be rotated?
+// equivalent to vec3Dot(v, qRot(v, x))
+fix_t qCosAngleX(const quaternion_t *x);
+fix_t qCosAngleY(const quaternion_t *x);
+fix_t qCosAngleZ(const quaternion_t *x);
 
-// decompose as infinitesmal roll, pitch & yaw rates
+// by what rate should we rotate to reach final from initial in a time of dt?
 // equivalent to twice the natural logarithm
 // assumes unit quaternion
-void qToRPYRate(const quaternion_t *x, fix_t scale,
-                fix_t *dRoll, fix_t *dPitch, fix_t *dYaw);
+void qDelta(const quaternion_t *final, const quaternion_t *initial,
+            fix_t dt, vec3_t *delta);
 
-// where would we end up if we kept rotating at this rate for one time unit?
+void qDelta0(const quaternion_t *final, fix_t dt, vec3_t *delta);
+
+// where would we end up if we kept rotating at this rate for a time of dt?
 // equivalent to the square root of the exponent
-void qFromRPYRate(fix_t dRoll, fix_t dPitch,
-                  fix_t dYaw, fix_t scale,
-                  quaternion_t *out);
+void qInteg(const quaternion_t *initial,
+            const vec3_t *rate, fix_t dt,
+            quaternion_t *final);
+
+void qInteg0(const vec3_t *rate, fix_t dt, quaternion_t *final);
 
 #endif //QUATERNION_H_

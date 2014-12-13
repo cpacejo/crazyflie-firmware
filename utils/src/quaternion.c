@@ -25,6 +25,7 @@
  */
 
 #include "fix.h"
+#include "vec3.h"
 #include "quaternion.h"
 
 
@@ -39,25 +40,23 @@ void qUnit(quaternion_t *const out)
 }
 
 // represent a vector as a quaternion
-void qVec(const fix_t vx, const fix_t vy, const fix_t vz,
-          quaternion_t *const out)
+void qVec(const vec3_t *const v, quaternion_t *const out)
 {
   out->r = 0.0k;
-  out->i = vx;
-  out->j = vy;
-  out->k = vz;
+  out->i = v->x;
+  out->j = v->y;
+  out->k = v->z;
 }
 
 // represent an Euler rotation as a unit quaternion
-void qComp(const fix_t angle, const fix_t ux, const fix_t uy, const fix_t uz,
-           quaternion_t *const out)
+void qComp(const fix_t angle, const vec3_t *const u, quaternion_t *const out)
 {
   fix_t s, c;
   sincosfix(0.5k * angle, &s, &c);
   out->r = c;
-  out->i = s * ux;
-  out->j = s * uy;
-  out->k = s * uz;
+  out->i = s * u->x;
+  out->j = s * u->y;
+  out->k = s * u->z;
 }
 
 void qNeg(const quaternion_t *const x, quaternion_t *const out)
@@ -103,87 +102,141 @@ void qUnitize(const quaternion_t *const x, quaternion_t *const out)
   qScale(invsqrtfix(qNorm2(x)), x, out);
 }
 
-void qMul(const quaternion_t *x,
-          const quaternion_t *y,
-          quaternion_t *out)
+void qMul(const quaternion_t *x, const quaternion_t *y, quaternion_t *out)
 {
   const fix_t out_r = x->r * y->r - x->i * y->i - x->j * y->j - x->k * y->k;
   const fix_t out_i = x->r * y->i + x->i * y->r + x->j * y->k - x->k * y->j;
   const fix_t out_j = x->r * y->j + x->j * y->r + x->k * y->i - x->i * y->k;
   const fix_t out_k = x->r * y->k + x->k * y->r + x->i * y->j - x->j * y->i;
+
   out->r = out_r;
   out->i = out_i;
   out->j = out_j;
   out->k = out_k;
 }
 
-// rotate a vector by the given unit quaternion
-void qRot(const fix_t vx, const fix_t vy, const fix_t vz,
-          const quaternion_t *const x,
-          fix_t *const out_vx_p,
-          fix_t *const out_vy_p,
-          fix_t *const out_vz_p)
+void qRot(const vec3_t *const v, const quaternion_t *const x, vec3_t *const out)
 {
-  const fix_t out_vx =
-    2.0k * (vx * (x->r * x->r + x->i * x->i - 0.5k) +
-            vy * (x->i * x->j - x->r * x->k) +
-            vz * (x->r * x->j + x->i * x->k));
+  const fix_t out_x =
+    2.0k * (v->x * (x->r * x->r + x->i * x->i - 0.5k) +
+            v->y * (x->i * x->j - x->r * x->k) +
+            v->z * (x->r * x->j + x->i * x->k));
 
-  const fix_t out_vy =
-    2.0k * (vy * (x->r * x->r + x->j * x->j - 0.5k) +
-            vz * (x->j * x->k - x->r * x->i) +
-            vx * (x->r * x->k + x->i * x->j));
+  const fix_t out_y =
+    2.0k * (v->y * (x->r * x->r + x->j * x->j - 0.5k) +
+            v->z * (x->j * x->k - x->r * x->i) +
+            v->x * (x->r * x->k + x->i * x->j));
 
-  const fix_t out_vz =
-    2.0k * (vz * (x->r * x->r + x->k * x->k - 0.5k) +
-            vx * (x->i * x->k - x->r * x->j) +
-            vy * (x->r * x->i + x->j * x->k));
+  const fix_t out_z =
+    2.0k * (v->z * (x->r * x->r + x->k * x->k - 0.5k) +
+            v->x * (x->i * x->k - x->r * x->j) +
+            v->y * (x->r * x->i + x->j * x->k));
 
-  *out_vx_p = out_vx;
-  *out_vy_p = out_vy;
-  *out_vz_p = out_vz;
+  out->x = out_x;
+  out->y = out_y;
+  out->z = out_z;
 }
 
-#if 0
-// decompose as infinitesmal roll, pitch & yaw rates
-// equivalent to twice the natural logarithm
-// assumes unit quaternion
-// TODO: go short way; fix asin
-void qToRPYRate(const quaternion_t *const x, const fix_t scale,
-                fix_t *const dRoll, fix_t *const dPitch, fix_t *const dYaw)
+void qRotX(const quaternion_t *const x, vec3_t *const out)
 {
-  const fix_t umag = sqrtf(1.0f - x->r * x->r);
+  const fix_t out_x = 2.0k * (x->r * x->r + x->i * x->i - 0.5k);
+  const fix_t out_y = x->r * x->k + x->i * x->j;
+  const fix_t out_z = x->i * x->k - x->r * x->j;
+
+  out->x = out_x;
+  out->y = out_y;
+  out->z = out_z;
+}
+
+void qRotY(const quaternion_t *const x, vec3_t *const out)
+{
+  const fix_t out_x = x->i * x->j - x->r * x->k;
+  const fix_t out_y = 2.0k * (x->r * x->r + x->j * x->j - 0.5k);
+  const fix_t out_z = x->r * x->i + x->j * x->k;
+
+  out->x = out_x;
+  out->y = out_y;
+  out->z = out_z;
+}
+
+void qRotZ(const quaternion_t *const x, vec3_t *const out)
+{
+  const fix_t out_x = x->r * x->j + x->i * x->k;
+  const fix_t out_y = x->j * x->k - x->r * x->i;
+  const fix_t out_z = 2.0k * (x->r * x->r + x->k * x->k - 0.5k);
+
+  out->x = out_x;
+  out->y = out_y;
+  out->z = out_z;
+}
+
+fix_t qCosAngleX(const quaternion_t *const x)
+{
+  return 2.0k * (x->r * x->r + x->i * x->i - 0.5k);
+}
+
+fix_t qCosAngleY(const quaternion_t *const x)
+{
+  return 2.0k * (x->r * x->r + x->j * x->j - 0.5k);
+}
+
+fix_t qCosAngleZ(const quaternion_t *const x)
+{
+  return 2.0k * (x->r * x->r + x->k * x->k - 0.5k);
+}
+
+void qDelta(const quaternion_t *const final, const quaternion_t *const initial,
+            const fix_t dt, vec3_t *const delta)
+{
+  quaternion_t qDiff;
+  qConj(initial, &qDiff);
+  qMul(final, &qDiff, &qDiff);
+  qDelta0(&qDiff, dt, delta);
+}
+
+void qDelta0(const quaternion_t *const final, const fix_t dt, vec3_t *const delta)
+{
+  // find the sine of (half) the angle; let the vector take care of sign
+  // note: don't use 1.0k - final->r * final->r; this is inaccurate for small angles
+  const fix_t umag2 = final->i * final->i + final->j * final->j + final->k * final->k;
+  const fix_t umagInv = invsqrtfix(umag2);
+  const fix_t umag = umagInv * umag2;
 
   fix_t asx;
   // the limit of 0.03 keeps the error on the sinc just below 1/2 ULP
-  if (fabsf(umag) < 0.03f) {
+  if (fabsfix(umag) < 0.03k) {
     // too close to singularity; compute manually to keep stable
+    // we can just use asin here (the x component is very close to 1
+    // and thus has no slope)
     // 3 is 3! (from expansion of sin(x)/x) divided by 2
-    asx = 2.0f + (umag * umag) * (1.0f / 3.0f);
+    asx = dt * (2.0k + umag2 * (1.0k / 3.0k));
   }
-  else
-    asx = 2.0f * asinf(umag) / umag;
+  else {
+    // use atan2 (to ensure we don't have 0 or inf slope)
+    // but we can manually divide out the vector magnitude
+    // note: use abs value of R to ensure minimal rotation
+    // (negation doesn't change quaternion)
+    asx = dt * atan2fix(umag, fabsfix(final->r)) * umagInv;
+  }
 
-  asx *= scale;
-
-  const fix_t dPitch_out = asx * x->i;
-  const fix_t dRoll_out = asx * x->j;
-  const fix_t dYaw_out = asx * x->k;
-
-  *dPitch = dPitch_out;
-  *dRoll = dRoll_out;
-  *dYaw = dYaw_out;
+  delta->x = asx * final->i;
+  delta->y = asx * final->j;
+  delta->z = asx * final->k;
 }
-#endif
 
-// where would we end up if we kept rotating at this rate for one time unit?
-// equivalent to the square root of the exponent
-void qFromRPYRate(const fix_t dRoll, const fix_t dPitch,
-                  const fix_t dYaw, const fix_t scale,
-                  quaternion_t *const out)
+void qInteg(const quaternion_t *const initial, const vec3_t *const delta,
+            const fix_t dt, quaternion_t *const final)
 {
-  const fix_t mag2 = dRoll * dRoll + dPitch * dPitch + dYaw * dYaw;
-  const fix_t angle2 = (scale * scale) * mag2;
+  quaternion_t qDiff;
+  qInteg0(delta, dt, &qDiff);
+  qMul(&qDiff, initial, final);
+}
+
+void qInteg0(const vec3_t *const delta, const fix_t dt,
+             quaternion_t *const final)
+{
+  const fix_t mag2 = vec3Norm2(delta);
+  const fix_t angle2 = (dt * dt) * mag2;
   fix_t c, sx;  // cos(s*x/2), sin(s*x/2)/x
 
   // the limit of 0.05^2 keeps the errors below 1/2 ULP
@@ -196,17 +249,17 @@ void qFromRPYRate(const fix_t dRoll, const fix_t dPitch,
 
     // 48 is 3! (from expansion of sin(x)/x) times 4 (0.5 * angle squared)
     // times 2 (to convert sinc(s*x/2)=sin(s*x/2)/(s*x/2) to sin(s*x/2)/x)
-    sx = scale * (0.5k - angle2 * (1.0k / 48.0k));
+    sx = dt * (0.5k - angle2 * (1.0k / 48.0k));
   }
   else {
     const fix_t invMag = invsqrtfix(mag2);
-    const fix_t angle = scale * (mag2 * invMag);
+    const fix_t angle = dt * (mag2 * invMag);
     sincosfix(0.5k * angle, &sx, &c);
     sx *= invMag;
   }
 
-  out->r = c;
-  out->i = sx * dPitch;
-  out->j = sx * dRoll;
-  out->k = sx * dYaw;
+  final->r = c;
+  final->i = sx * delta->x;
+  final->j = sx * delta->y;
+  final->k = sx * delta->z;
 }

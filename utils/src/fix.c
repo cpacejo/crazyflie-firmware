@@ -71,6 +71,7 @@ fix_t invsqrtfix(const fix_t x)
   else
     res = ((log_2 & 1) == 0 ? 1.0k : M_SQRT1_2_FIX) >> (log_2 >> 1);
 
+  // Newton's method
   const fix_t half_x = 0.5k * x;
   for (unsigned int i = 0; i < 4; i++) {
     const fix_t old_res = res;
@@ -110,12 +111,14 @@ int floorLog2fix(const fix_t x)
 // these assume fabsfix(x) <= M_PI_8_FIX
 static fix_t sinfix_8(const fix_t x)
 {
+  // Taylor series order 5
   const fix_t x2 = x * x;
   return x * (1.0k - (x2 * (1.0k - x2 * (1.0k / 20.0k))) * (1.0k / 6.0k));
 }
 
 static fix_t cosfix_8(const fix_t x)
 {
+  // Taylor series order 4
   const fix_t x2 = x * x;
   return 1.0k - (x2 * (1.0k - x2 * (1.0k / 12.0k))) * (1.0k / 2.0k);
 }
@@ -123,6 +126,7 @@ static fix_t cosfix_8(const fix_t x)
 // sin(x - pi/4)
 static fix_t sin4fix_8(const fix_t x)
 {
+  // Taylor series order 4 about pi/4
   return M_SQRT1_2_FIX * (1.0k + x * (1.0k - (x * (1.0k + (x * (1.0k - x * (1.0k / 4.0k))) * (1.0k / 3.0k))) * (1.0k / 2.0k)));
 }
 
@@ -168,4 +172,43 @@ void sincosfix(fix_t x, fix_t *const restrict s, fix_t *const restrict c)
 {
   *s = sinfix(x);
   *c = cosfix(x);
+}
+
+static fix_t atanfix_aux(const fix_t x)
+{
+  // Pade' approximation order (3,4)
+  const fix_t x2 = x * x;
+  return (x * (105.0k + x2 * 55.0k)) / (105.0k + x2 * (90.0k + x2 * 9.0k));
+}
+
+// atan(x + 1)
+static fix_t atanfix_aux1(const fix_t x)
+{
+  // Pade' approximation order (3,3) about 1.0k
+  return M_PI_4_FIX +
+    (x * (60.0k + x * (60.0k + x * 19.0k))) /
+    (120.0k + x * (180.0k + x * (108.0k + x * 24.0k)));
+}
+
+fix_t atan2fix(const fix_t y, const fix_t x)
+{
+  if (fabsfix(y) <= fabsfix(0.5k * x))
+    return atanfix_aux(y / x);
+  else if (fabsfix(x) <= fabsfix(0.5k * y))
+  {
+    const fix_t x_y = x / y;
+    if (x_y >= 0.0k)
+      return M_PI_2_FIX - atanfix_aux(x_y);
+    else
+      return -M_PI_2_FIX - atanfix_aux(x_y);
+  }
+  else
+  {
+    const fix_t y_x = y / x;
+    if (y_x >= 0.0k)
+      return atanfix_aux1(y_x - 1.0k);
+    else
+      // use -1.0k * instead of - to avoid stupid GCC internal error
+      return -1.0k * atanfix_aux1(-y_x - 1.0k);
+  }
 }

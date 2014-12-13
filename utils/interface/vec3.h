@@ -32,6 +32,8 @@
 
 typedef Axis3f vec3_t;  // temporary
 
+#define VEC3_ZERO_INIT { .x = 0.0k, .y = 0.0k, .z = 0.0k }
+
 #define VEC3_UNIT_X_INIT { .x = 1.0k, .y = 0.0k, .z = 0.0k }
 #define VEC3_UNIT_Y_INIT { .x = 0.0k, .y = 1.0k, .z = 0.0k }
 #define VEC3_UNIT_Z_INIT { .x = 0.0k, .y = 0.0k, .z = 1.0k }
@@ -43,6 +45,8 @@ typedef Axis3f vec3_t;  // temporary
 fix_t vec3Norm2(const vec3_t *x);
 void vec3Neg(const vec3_t *x, vec3_t *out);
 void vec3Scale(fix_t x, const vec3_t *y, vec3_t *out);
+void vec3Add(const vec3_t *x, const vec3_t *y, vec3_t *out);
+void vec3ScaleAdd(fix_t x, const vec3_t *y, const vec3_t *z, vec3_t *out);
 fix_t vec3Dot(const vec3_t *x, const vec3_t *y);
 void vec3Cross(const vec3_t *x, const vec3_t *y, vec3_t *out);
 
