@@ -27,13 +27,17 @@
 #define SENSORFUSION6_H_
 #include <stdbool.h>
 #include "fix.h"
+#include "vec3.h"
+#include "quaternion.h"
 
 void sensfusion6Init(void);
 bool sensfusion6Test(void);
 
-void sensfusion6UpdateQ(fix_t gx, fix_t gy, fix_t gz, fix_t ax, fix_t ay, fix_t az, fix_t dt);
-void sensfusion6GetEulerRPY(fix_t* roll, fix_t* pitch, fix_t* yaw);
-fix_t sensfusion6GetAccZWithoutGravity(const fix_t ax, const fix_t ay, const fix_t az);
+// g: angular velocity in radians; a: acceleration vector
+void sensfusion6UpdateQ(const vec3_t *g, const vec3_t *a, fix_t dt);
+void sensfusion6GetQ(quaternion_t *qOut);
+void sensfusion6GetQRate(vec3_t *qRateOut);
+fix_t sensfusion6GetAccZWithoutGravity(const vec3_t *a);
 
 
 #endif /* SENSORFUSION6_H_ */

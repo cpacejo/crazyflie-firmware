@@ -55,7 +55,7 @@ void pidInit(PidObject* pid, const fix_t desired, const fix_t kp,
   pid->kd = kd;
   pid->iLimit    = DEFAULT_PID_INTEGRATION_LIMIT;
   pid->dt        = dt;
-  pid->dt        = 1.0k / dt;
+  pid->idt       = 1.0k / dt;
 }
 
 void pidUpdate(PidObject* pid, const fix_t measured, const bool updateError)

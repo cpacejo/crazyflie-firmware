@@ -29,8 +29,12 @@
 #include "vec3.h"
 
 typedef struct {
-  fix_t r, i, j, k;
-} quaternion_t;
+  fix_t r;
+  union {
+    struct { fix_t i, j, k; };
+    vec3_t ijk;
+  };
+} __attribute__ ((packed)) quaternion_t;
 
 #define Q_UNIT_INIT { .r = 1.0k, .i = 0.0k, .j = 0.0k, .k = 0.0k }
 
@@ -64,17 +68,16 @@ fix_t qCosAngleZ(const quaternion_t *x);
 // by what rate should we rotate to reach final from initial in a time of dt?
 // equivalent to twice the natural logarithm
 // assumes unit quaternion
-void qDelta(const quaternion_t *final, const quaternion_t *initial,
-            fix_t dt, vec3_t *delta);
-
 void qDelta0(const quaternion_t *final, fix_t dt, vec3_t *delta);
 
 // where would we end up if we kept rotating at this rate for a time of dt?
 // equivalent to the square root of the exponent
-void qInteg(const quaternion_t *initial,
-            const vec3_t *rate, fix_t dt,
-            quaternion_t *final);
-
 void qInteg0(const vec3_t *rate, fix_t dt, quaternion_t *final);
+
+// x - roll; y - pitch; z - yaw
+void qToRPY(const quaternion_t *x, vec3_t *rpy);
+
+// what quaternion will most directly rotate from to to (both unit vectors)?
+void qVecDiff(const vec3_t *to, const vec3_t *from, quaternion_t *x);
 
 #endif //QUATERNION_H_

@@ -34,18 +34,14 @@
 void qUnit(quaternion_t *const out)
 {
   out->r = 1.0k;
-  out->i = 0.0k;
-  out->j = 0.0k;
-  out->k = 0.0k;
+  out->ijk = (vec3_t) VEC3_ZERO_INIT;
 }
 
 // represent a vector as a quaternion
 void qVec(const vec3_t *const v, quaternion_t *const out)
 {
   out->r = 0.0k;
-  out->i = v->x;
-  out->j = v->y;
-  out->k = v->z;
+  out->ijk = *v;
 }
 
 // represent an Euler rotation as a unit quaternion
@@ -54,39 +50,31 @@ void qComp(const fix_t angle, const vec3_t *const u, quaternion_t *const out)
   fix_t s, c;
   sincosfix(0.5k * angle, &s, &c);
   out->r = c;
-  out->i = s * u->x;
-  out->j = s * u->y;
-  out->k = s * u->z;
+  vec3Scale(s, u, &out->ijk);
 }
 
 void qNeg(const quaternion_t *const x, quaternion_t *const out)
 {
   out->r = -x->r;
-  out->i = -x->i;
-  out->j = -x->j;
-  out->k = -x->k;
+  vec3Neg(&x->ijk, &out->ijk);
 }
 
 void qConj(const quaternion_t *const x, quaternion_t *const out)
 {
   out->r = x->r;
-  out->i = -x->i;
-  out->j = -x->j;
-  out->k = -x->k;
+  vec3Neg(&x->ijk, &out->ijk);
 }
 
 fix_t qNorm2(const quaternion_t *const x)
 {
-  return x->r * x->r + x->i * x->i + x->j * x->j + x->k * x->k;
+  return x->r * x->r + vec3Norm2(&x->ijk);
 }
 
 void qScale(const fix_t x, const quaternion_t *const y,
             quaternion_t *const out)
 {
   out->r = x * y->r;
-  out->i = x * y->i;
-  out->j = x * y->j;
-  out->k = x * y->k;
+  vec3Scale(x, &y->ijk, &out->ijk);
 }
 
 // note that qInv(unit) is equivalent to the (faster) qConj(unit)
@@ -140,8 +128,8 @@ void qRot(const vec3_t *const v, const quaternion_t *const x, vec3_t *const out)
 void qRotX(const quaternion_t *const x, vec3_t *const out)
 {
   const fix_t out_x = 2.0k * (x->r * x->r + x->i * x->i - 0.5k);
-  const fix_t out_y = x->r * x->k + x->i * x->j;
-  const fix_t out_z = x->i * x->k - x->r * x->j;
+  const fix_t out_y = 2.0k * (x->r * x->k + x->i * x->j);
+  const fix_t out_z = 2.0k * (x->i * x->k - x->r * x->j);
 
   out->x = out_x;
   out->y = out_y;
@@ -150,9 +138,9 @@ void qRotX(const quaternion_t *const x, vec3_t *const out)
 
 void qRotY(const quaternion_t *const x, vec3_t *const out)
 {
-  const fix_t out_x = x->i * x->j - x->r * x->k;
+  const fix_t out_x = 2.0k * (x->i * x->j - x->r * x->k);
   const fix_t out_y = 2.0k * (x->r * x->r + x->j * x->j - 0.5k);
-  const fix_t out_z = x->r * x->i + x->j * x->k;
+  const fix_t out_z = 2.0k * (x->r * x->i + x->j * x->k);
 
   out->x = out_x;
   out->y = out_y;
@@ -161,8 +149,8 @@ void qRotY(const quaternion_t *const x, vec3_t *const out)
 
 void qRotZ(const quaternion_t *const x, vec3_t *const out)
 {
-  const fix_t out_x = x->r * x->j + x->i * x->k;
-  const fix_t out_y = x->j * x->k - x->r * x->i;
+  const fix_t out_x = 2.0k * (x->r * x->j + x->i * x->k);
+  const fix_t out_y = 2.0k * (x->j * x->k - x->r * x->i);
   const fix_t out_z = 2.0k * (x->r * x->r + x->k * x->k - 0.5k);
 
   out->x = out_x;
@@ -183,15 +171,6 @@ fix_t qCosAngleY(const quaternion_t *const x)
 fix_t qCosAngleZ(const quaternion_t *const x)
 {
   return 2.0k * (x->r * x->r + x->k * x->k - 0.5k);
-}
-
-void qDelta(const quaternion_t *const final, const quaternion_t *const initial,
-            const fix_t dt, vec3_t *const delta)
-{
-  quaternion_t qDiff;
-  qConj(initial, &qDiff);
-  qMul(final, &qDiff, &qDiff);
-  qDelta0(&qDiff, dt, delta);
 }
 
 void qDelta0(const quaternion_t *const final, const fix_t dt, vec3_t *const delta)
@@ -216,20 +195,11 @@ void qDelta0(const quaternion_t *const final, const fix_t dt, vec3_t *const delt
     // but we can manually divide out the vector magnitude
     // note: use abs value of R to ensure minimal rotation
     // (negation doesn't change quaternion)
-    asx = dt * atan2fix(umag, fabsfix(final->r)) * umagInv;
+    asx = dt * 2.0k * atan2fix(umag, fabsfix(final->r)) * umagInv;
   }
 
-  delta->x = asx * final->i;
-  delta->y = asx * final->j;
-  delta->z = asx * final->k;
-}
-
-void qInteg(const quaternion_t *const initial, const vec3_t *const delta,
-            const fix_t dt, quaternion_t *const final)
-{
-  quaternion_t qDiff;
-  qInteg0(delta, dt, &qDiff);
-  qMul(&qDiff, initial, final);
+  // negate the quaternion if necessary to match positive R
+  vec3Scale(final->r < 0.0k ? -asx : asx, &final->ijk, delta);
 }
 
 void qInteg0(const vec3_t *const delta, const fix_t dt,
@@ -259,7 +229,20 @@ void qInteg0(const vec3_t *const delta, const fix_t dt,
   }
 
   final->r = c;
-  final->i = sx * delta->x;
-  final->j = sx * delta->y;
-  final->k = sx * delta->z;
+  vec3Scale(sx, delta, &final->ijk);
+}
+
+void qToRPY(const quaternion_t *const x, vec3_t *const rpy)
+{
+  rpy->x = atan2fix(x->r * x->i + x->j * x->k, 0.5k - (x->i * x->i + x->j * x->j));
+  rpy->y = asinfix(2.0k * (x->r * x->j - x->k * x->i));
+  rpy->z = atan2fix(x->r * x->k + x->i * x->j, 0.5k - (x->j * x->j + x->k * x->k));
+}
+
+void qVecDiff(const vec3_t *const to, const vec3_t *const from, quaternion_t *const x)
+{
+  quaternion_t temp;
+  temp.r = vec3Dot(from, to) + 1.0k;
+  vec3Cross(from, to, &temp.ijk);
+  qUnitize(&temp, x);
 }

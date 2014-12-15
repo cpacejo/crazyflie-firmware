@@ -174,6 +174,7 @@ void sincosfix(fix_t x, fix_t *const restrict s, fix_t *const restrict c)
   *c = cosfix(x);
 }
 
+// assumes |x| <= 0.5
 static fix_t atanfix_aux(const fix_t x)
 {
   // Pade' approximation order (3,4)
@@ -181,7 +182,7 @@ static fix_t atanfix_aux(const fix_t x)
   return (x * (105.0k + x2 * 55.0k)) / (105.0k + x2 * (90.0k + x2 * 9.0k));
 }
 
-// atan(x + 1)
+// atan(x + 1); assumes 0.5 <= x + 1 <= 2.0
 static fix_t atanfix_aux1(const fix_t x)
 {
   // Pade' approximation order (3,3) about 1.0k
@@ -192,23 +193,67 @@ static fix_t atanfix_aux1(const fix_t x)
 
 fix_t atan2fix(const fix_t y, const fix_t x)
 {
+  fix_t res;
+
   if (fabsfix(y) <= fabsfix(0.5k * x))
-    return atanfix_aux(y / x);
+    res = atanfix_aux(y / x);
   else if (fabsfix(x) <= fabsfix(0.5k * y))
   {
     const fix_t x_y = x / y;
     if (x_y >= 0.0k)
-      return M_PI_2_FIX - atanfix_aux(x_y);
+      res = M_PI_2_FIX - atanfix_aux(x_y);
     else
-      return -M_PI_2_FIX - atanfix_aux(x_y);
+      res = -M_PI_2_FIX - atanfix_aux(x_y);
   }
   else
   {
     const fix_t y_x = y / x;
     if (y_x >= 0.0k)
-      return atanfix_aux1(y_x - 1.0k);
+      res = atanfix_aux1(y_x - 1.0k);
     else
       // use -1.0k * instead of - to avoid stupid GCC internal error
-      return -1.0k * atanfix_aux1(-y_x - 1.0k);
+      res = -1.0k * atanfix_aux1(-y_x - 1.0k);
   }
+
+  if (x < 0.0k)
+  {
+    if (y < 0.0k)
+      return res - M_PI_FIX;
+    else
+      return res + M_PI_FIX;
+  }
+  else return res;
+}
+
+// asin(x - 1); valid for 0 < x < 0.25
+static fix_t asinfix_aux(const fix_t x)
+{
+  // Puiseux series order 4 about -1, plus pi/2
+  return sqrtfix(x) * (1.0k + x * (1.0k + x * (1.0k + x * (1.0k + x *
+      (49.0k / 144.0k)) * (25.0k / 84.0k)) * (9.0k / 40.0k)) * (1.0k / 12.0k)) * M_SQRT2_FIX;
+}
+
+fix_t asinfix(const fix_t x)
+{
+  // FIXME: this is not perfectly accurate over 0.25 < |x| < 0.75
+  // (we'd probably need Pade' approximation); but this is currently
+  // only used for display purposes
+
+  if (x < -0.5k)
+    return asinfix_aux(x + 1.0k) - M_PI_2_FIX;
+  else if (x < 0.5k)
+  {
+    // Taylor series order 5; valid for |x| < 0.25
+    const fix_t x2 = x * x;
+    return x * (1.0k + x2 * (1.0k + x2 * (9.0k / 20.0k)) * (1.0k / 6.0k));
+  }
+  else
+  {
+    return M_PI_2_FIX + -1.0k * asinfix_aux(1.0k - x);
+  }
+}
+
+fix_t acosfix(const fix_t x)
+{
+  return M_PI_2_FIX + -1.0k * asinfix(x);
 }

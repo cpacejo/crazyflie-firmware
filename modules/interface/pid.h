@@ -30,17 +30,17 @@
 #include <stdbool.h>
 #include "fix.h"
 
-#define PID_ROLL_RATE_KP  70.0k
+#define PID_ROLL_RATE_KP  4000.0k
 #define PID_ROLL_RATE_KI  0.0k
 #define PID_ROLL_RATE_KD  0.0k
 #define PID_ROLL_RATE_INTEGRATION_LIMIT    100.0k
 
-#define PID_PITCH_RATE_KP  70.0k
+#define PID_PITCH_RATE_KP  4000.0k
 #define PID_PITCH_RATE_KI  0.0k
 #define PID_PITCH_RATE_KD  0.0k
 #define PID_PITCH_RATE_INTEGRATION_LIMIT   100.0k
 
-#define PID_YAW_RATE_KP  50.0k
+#define PID_YAW_RATE_KP  3000.0k
 #define PID_YAW_RATE_KI  0.0k
 #define PID_YAW_RATE_KD  0.0k
 #define PID_YAW_RATE_INTEGRATION_LIMIT     500.0k
@@ -49,19 +49,16 @@
 #define PID_ROLL_KI  0.0k
 #define PID_ROLL_KD  0.0k
 #define PID_ROLL_INTEGRATION_LIMIT    20.0k
-#define PID_ROLL_MAX_SLEW  300.0k
 
 #define PID_PITCH_KP  3.5k
 #define PID_PITCH_KI  0.0k
 #define PID_PITCH_KD  0.0k
 #define PID_PITCH_INTEGRATION_LIMIT   20.0k
-#define PID_PITCH_MAX_SLEW  300.0k
 
 #define PID_YAW_KP  12.0k
 #define PID_YAW_KI  0.0k
 #define PID_YAW_KD  0.0k
 #define PID_YAW_INTEGRATION_LIMIT     360.0k
-#define PID_YAW_MAX_SLEW  1000.0k
 
 
 #define DEFAULT_PID_INTEGRATION_LIMIT  5000.0k

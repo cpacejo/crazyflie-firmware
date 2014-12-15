@@ -29,6 +29,8 @@
 
 #include "math.h"
 #include "fix.h"
+#include "vec3.h"
+#include "quaternion.h"
 
 #include "system.h"
 #include "pm.h"
@@ -52,6 +54,15 @@
 #undef abs
 #define abs(x) ({ __typeof__ (x) _x = (x); _x < 0 ? -_x : _x; })
 
+static fix_t wrapAngle(fix_t angle)
+{
+  while (angle >= 180.0f)
+    angle -= 360.0f;
+  while (angle < -180.0f)
+    angle += 360.0f;
+  return angle;
+}
+
 /**
  * Defines in what divided update rate should the attitude
  * control loop run relative the rate control loop.
@@ -65,21 +76,21 @@
 
 #define ACTUATOR_THRUST_SCALE 65535.0k
 
-static Axis3f gyro; // Gyro axis data in deg/s
-static Axis3f acc;  // Accelerometer axis data in mG
-static Axis3f mag;  // Magnetometer axis data in testla
+static vec3_t gyro; // Gyro axis data in rad/s
+static vec3_t acc;  // Accelerometer axis data in mG
+static vec3_t mag;  // Magnetometer axis data in tesla
 
-static fix_t eulerRollActual = 0.0k;
-static fix_t eulerPitchActual = 0.0k;
-static fix_t eulerYawActual = 0.0k;
+static quaternion_t qActual = Q_UNIT_INIT;
 
-static fix_t eulerRollDesired = 0.0k;
-static fix_t eulerPitchDesired = 0.0k;
-static fix_t eulerYawDesired = 0.0k;
+static fix_t rollDesired = 0.0k;
+static fix_t pitchDesired = 0.0k;
+static fix_t yawDesired = 0.0k;
+static quaternion_t qDesired = Q_UNIT_INIT;
 
-static fix_t rollRateDesired = 0.0k;
-static fix_t pitchRateDesired = 0.0k;
-static fix_t yawRateDesired = 0.0k;
+static vec3_t qRateDesired = VEC3_ZERO_INIT;
+static vec3_t qRateActual = VEC3_ZERO_INIT;
+
+static vec3_t rpyActual = VEC3_ZERO_INIT;
 
 static fix_t thrustDesired = 0.0k;
 
@@ -125,7 +136,6 @@ static uint16_t altHoldMinThrust    = 00000; // minimum hover thrust - not used 
 static uint16_t altHoldBaseThrust   = 43000; // approximate throttle needed when in perfect hover. More weight/older battery can use a higher value
 static uint16_t altHoldMaxThrust    = 60000; // max altitude hold thrust
 
-
 static RPYType rollType;
 static RPYType pitchType;
 static RPYType yawType;
@@ -158,7 +168,7 @@ void stabilizerInit(void)
   motorsInit();
   imu6Init();
   sensfusion6Init();
-  controllerInit();
+  controllerInit(IMU_UPDATE_DT, FUSION_UPDATE_DT);
 
   xTaskCreate(stabilizerTask, (const signed char * const)"STABILIZER",
               2*configMINIMAL_STACK_SIZE, NULL, /*Piority*/2, NULL);
@@ -195,44 +205,66 @@ static void stabilizerTask(void* param)
   {
     vTaskDelayUntil(&lastWakeTime, F2T(IMU_UPDATE_FREQ)); // 500Hz
 
-    // Magnetometer not yet used more then for logging.
-    imu9Read(&gyro, &acc, &mag);
+    // convention is the "nautical" one: x forward, y right, z down
+
+    // Magnetometer not yet used more than for logging.
+    vec3_t gyroTemp, accTemp;
+    imu9Read(&gyroTemp, &accTemp, &mag);
+    vec3Scale(M_PI_FIX / 180.0k, &gyroTemp, &gyroTemp);
+    gyro.x = gyroTemp.x;
+    gyro.y = -gyroTemp.y;
+    gyro.z = -gyroTemp.z;
+    acc.x = accTemp.x;
+    acc.y = -accTemp.y;
+    acc.z = -accTemp.z;
 
     if (imu6IsCalibrated())
     {
-      fix_t tempEulerRollDesired, tempEulerPitchDesired, tempEulerYawDesired;
+      fix_t tempRollDesired, tempPitchDesired, tempYawDesired;
+      quaternion_t tempQDesired = Q_UNIT_INIT;
 
-      commanderGetRPY(&tempEulerRollDesired, &tempEulerPitchDesired, &tempEulerYawDesired);
+      commanderGetRPY(&tempRollDesired, &tempPitchDesired, &tempYawDesired);
       commanderGetRPYType(&rollType, &pitchType, &yawType);
 
-      if (rollType == ANGLE)
-        eulerRollDesired = tempEulerRollDesired;
-      if (pitchType == ANGLE)
-        eulerPitchDesired = tempEulerPitchDesired;
-      if (yawType == ANGLE)
-        eulerYawDesired = tempEulerYawDesired;
+      // FIXME: hardcoded as roll/pitch ANGLE and yaw CRATE
+      // generalizing this is hard with quaternions!
+      rollDesired = tempRollDesired;
+      pitchDesired = tempPitchDesired;
 
       // 250HZ
       if (++attitudeCounter >= ATTITUDE_UPDATE_RATE_DIVIDER)
       {
-        if (rollType == CRATE)
-          eulerRollDesired += tempEulerRollDesired * FUSION_UPDATE_DT;
-        if (pitchType == CRATE)
-          eulerPitchDesired += tempEulerPitchDesired * FUSION_UPDATE_DT;
-        if (yawType == CRATE)
-          eulerYawDesired += tempEulerYawDesired * FUSION_UPDATE_DT;
+        yawDesired = wrapAngle(yawDesired + tempYawDesired * FUSION_UPDATE_DT);
+      }
 
-        sensfusion6UpdateQ(gyro.x, gyro.y, gyro.z, acc.x, acc.y, acc.z, FUSION_UPDATE_DT);
-        sensfusion6GetEulerRPY(&eulerRollActual, &eulerPitchActual, &eulerYawActual);
+      // first tilt to the desired (Cartesian) pitch & roll
+      qInteg0(&(vec3_t) {
+        .x = rollDesired * M_PI_FIX / 180.0k,
+        .y = pitchDesired * M_PI_FIX / 180.0k,
+        .z = 0.0k }, 1.0k, &tempQDesired);
 
-        accWZ = sensfusion6GetAccZWithoutGravity(acc.x, acc.y, acc.z);
-        accMAG = (acc.x*acc.x) + (acc.y*acc.y) + (acc.z*acc.z);
+      // now rotate to the desired yaw
+      quaternion_t yawQ;
+      qComp(yawDesired * M_PI_FIX / 180.0k, &(vec3_t) VEC3_UNIT_Z_INIT, &yawQ);
+      qMul(&yawQ, &tempQDesired, &tempQDesired);
+
+      qDesired = tempQDesired;
+
+      if (attitudeCounter >= ATTITUDE_UPDATE_RATE_DIVIDER)
+      {
+        sensfusion6UpdateQ(&gyro, &acc, FUSION_UPDATE_DT);
+        sensfusion6GetQ(&qActual);
+        sensfusion6GetQRate(&qRateActual);
+        vec3_t rpyActualRad;
+        qToRPY(&qActual, &rpyActualRad);
+        vec3Scale(180.0k / M_PI_FIX, &rpyActualRad, &rpyActual);
+
+        accWZ = sensfusion6GetAccZWithoutGravity(&acc);
+        accMAG = vec3Norm2(&acc);
         // Estimate speed from acc (drifts)
         vSpeed += deadband(accWZ, vAccDeadband) * FUSION_UPDATE_DT;
 
-        controllerCorrectAttitudePID(eulerRollActual, eulerPitchActual, eulerYawActual,
-                                     eulerRollDesired, eulerPitchDesired, -eulerYawDesired,
-                                     &rollRateDesired, &pitchRateDesired, &yawRateDesired);
+        controllerCorrectAttitudePID(&qActual, &qDesired, &qRateDesired);
         attitudeCounter = 0;
       }
 
@@ -245,16 +277,7 @@ static void stabilizerTask(void* param)
       }
       #endif
 
-      if (rollType == RATE)
-        rollRateDesired = tempEulerRollDesired;
-      if (pitchType == RATE)
-        pitchRateDesired = tempEulerPitchDesired;
-      if (yawType == RATE)
-        yawRateDesired = -tempEulerYawDesired;
-
-      // TODO: Investigate possibility to subtract gyro drift.
-      controllerCorrectRatePID(gyro.x, -gyro.y, gyro.z,
-                               rollRateDesired, pitchRateDesired, yawRateDesired);
+      controllerCorrectRatePID(&qRateActual, &qRateDesired);
 
       controllerGetActuatorOutput(&actuatorRoll, &actuatorPitch, &actuatorYaw);
 
@@ -263,8 +286,7 @@ static void stabilizerTask(void* param)
         // Use thrust from controller if not in altitude hold mode
         commanderGetThrust(&thrustDesired);
 #if REFERENCE_THRUST_TO_VERTICAL
-        const fix_t cosTiltAngle =
-          cosfix(sqrtfix(eulerRollActual*eulerRollActual + eulerPitchActual*eulerPitchActual) * (M_PI_FIX / 180.0k));
+        const fix_t cosTiltAngle = qCosAngleZ(&qActual);
 
         if (cosTiltAngle < 0.0k) {
           // oops, we're upside down.
@@ -295,9 +317,9 @@ static void stabilizerTask(void* param)
 #elif defined(TUNE_PITCH)
         distributePower(actuatorThrust, 0, actuatorPitch, 0);
 #elif defined(TUNE_YAW)
-        distributePower(actuatorThrust, 0, 0, -actuatorYaw);
+        distributePower(actuatorThrust, 0, 0, actuatorYaw);
 #else
-        distributePower(actuatorThrust, actuatorRoll, actuatorPitch, -actuatorYaw);
+        distributePower(actuatorThrust, actuatorRoll, actuatorPitch, actuatorYaw);
 #endif
       }
       else
@@ -305,11 +327,11 @@ static void stabilizerTask(void* param)
         distributePower(0, 0, 0, 0);
         controllerResetAllPID();
         if (rollType == CRATE)
-          eulerRollDesired = eulerRollActual;
+          rollDesired = 0.0k;
         if (pitchType == CRATE)
-          eulerPitchDesired = eulerPitchActual;
+          pitchDesired = 0.0k;
         if (yawType == CRATE)
-          eulerYawDesired = -eulerYawActual;
+          yawDesired = rpyActual.z;
       }
     }
   }
@@ -476,9 +498,9 @@ static fix_t deadband(fix_t value, const fix_t threshold)
 }
 
 LOG_GROUP_START(stabilizer)
-LOG_ADD(LOG_FIX, roll, &eulerRollActual)
-LOG_ADD(LOG_FIX, pitch, &eulerPitchActual)
-LOG_ADD(LOG_FIX, yaw, &eulerYawActual)
+LOG_ADD(LOG_FIX, roll, &rpyActual.x)
+LOG_ADD(LOG_FIX, pitch, &rpyActual.y)
+LOG_ADD(LOG_FIX, yaw, &rpyActual.z)
 LOG_ADD(LOG_UINT16, thrust, &actuatorThrust)
 LOG_GROUP_STOP(stabilizer)
 

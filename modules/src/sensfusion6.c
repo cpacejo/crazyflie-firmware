@@ -26,22 +26,22 @@
 #include "stm32f10x_conf.h"
 #include "fix.h"
 #include "quaternion.h"
+#include "vec3.h"
 
 #include "sensfusion6.h"
 #include "imu.h"
 #include "param.h"
 
-#define KP_DEF  0.4k // proportional gain
+#define KP_DEF  1.0k // proportional gain
 #define KI_DEF  0.001k // integral gain
 
 static fix_t kp = KP_DEF;    // proportional gain (Kp)
 static fix_t ki = KI_DEF;    // integral gain (Ki)
-static fix_t integralFBx = 0.0k;
-static fix_t integralFBy = 0.0k;
-static fix_t integralFBz = 0.0k;  // integral error terms scaled by Ki
+static vec3_t integralFB = VEC3_ZERO_INIT;  // integral error terms scaled by Ki
 
 
 static quaternion_t q = Q_UNIT_INIT;  // quaternion of sensor frame relative to auxiliary frame
+static vec3_t qRate = VEC3_ZERO_INIT;  // quaternion rate of change
 
 static bool isInit;
 
@@ -65,85 +65,69 @@ bool sensfusion6Test(void)
 // Date     Author      Notes
 // 29/09/2011 SOH Madgwick    Initial release
 // 02/10/2011 SOH Madgwick  Optimised for reduced CPU load
-void sensfusion6UpdateQ(fix_t gx, fix_t gy, fix_t gz, fix_t ax, fix_t ay, fix_t az, fix_t dt)
+// 12/12/2014 C Pacejo  rewrote using quaternion library
+void sensfusion6UpdateQ(const vec3_t *const g, const vec3_t *const a, const fix_t dt)
 {
-  gx *= M_PI_FIX / 180.0k;
-  gy *= M_PI_FIX / 180.0k;
-  gz *= M_PI_FIX / 180.0k;
+  vec3_t qRateTemp = *g;
+  const fix_t aNorm2 = vec3Norm2(a);
 
   // Compute feedback only if accelerometer measurement valid (avoids NaN in accelerometer normalisation)
-  if (!(fabsfix(ax) < 0.01k && fabsfix(ay) < 0.01k && fabsfix(az) < 0.01k))
+  if (aNorm2 >= 0.01k)
   {
     // Normalise accelerometer measurement
-    const fix_t recipNorm = invsqrtfix(ax * ax + ay * ay + az * az);
-    ax *= recipNorm;
-    ay *= recipNorm;
-    az *= recipNorm;
+    vec3_t aUnit;
+    vec3Scale(invsqrtfix(aNorm2), a, &aUnit);
 
     // Estimated direction of gravity and vector perpendicular to magnetic flux
-    fix_t vx, vy, vz;
-    quaternion_t q_conj;
-    qConj(&q, &q_conj);  // why the conjugation here?
-    qRot(0.0k, 0.0k, 1.0k, &q_conj, &vx, &vy, &vz);
+    vec3_t v;
+    quaternion_t qc;
+    qConj(&q, &qc);
+    qRotZ(&qc, &v);
+    vec3Neg(&v, &v);
 
-    // Error is cross product between estimated and measured direction of gravity
-    // TODO: should this be the other way around?
-    const fix_t ex = ay * vz - az * vy;
-    const fix_t ey = az * vx - ax * vz;
-    const fix_t ez = ax * vy - ay * vx;
+    // Compute rate needed to rotate to desired position
+    quaternion_t qDiff;
+    qVecDiff(&v, &aUnit, &qDiff);
+    vec3_t e;
+    qDelta0(&qDiff, 1.0k, &e);
 
     // Compute and apply integral feedback
-    integralFBx += ki * ex * dt;  // integral error scaled by Ki
-    integralFBy += ki * ey * dt;
-    integralFBz += ki * ez * dt;
-    gx += integralFBx;  // apply integral feedback
-    gy += integralFBy;
-    gz += integralFBz;
+    vec3ScaleAdd(dt, &e, &integralFB, &integralFB);  // integral error scaled by dt
+    vec3ScaleAdd(ki, &integralFB, &qRateTemp, &qRateTemp);  // apply integral feedback
 
     // Apply proportional feedback
-    gx += kp * ex;
-    gy += kp * ey;
-    gz += kp * ez;
+    vec3ScaleAdd(kp, &e, &qRateTemp, &qRateTemp);
   }
 
   // Integrate rate of change of quaternion
-  quaternion_t gq, q_new;
-  qFromRPYRate(gy, gx, gz, dt, &gq);
-  qMul(&q, &gq, &q_new);  // FIXME: This should be other way around
+  quaternion_t qTemp;
+  qInteg0(&qRateTemp, dt, &qTemp);
+  // multiply "backward"; we want to apply rotation *locally*
+  qMul(&q, &qTemp, &qTemp);
 
   // Normalise quaternion
-  qUnitize(&q_new, &q);
+  qUnitize(&qTemp, &q);
+  qRate = qRateTemp;
 }
 
-#include <math.h>
-void sensfusion6GetEulerRPY(fix_t* roll, fix_t* pitch, fix_t* yaw)
+void sensfusion6GetQ(quaternion_t *const qOut)
 {
-  fix_t gx, gy, gz; // estimated gravity direction
-
-  gx = 2.0k * (q.i*q.k - q.r*q.j);
-  gy = 2.0k * (q.r*q.i + q.j*q.k);
-  gz = q.r*q.r - q.i*q.i - q.j*q.j + q.k*q.k;
-
-  if (gx>1.0k) gx=1.0k;
-  if (gx<-1.0k) gx=-1.0k;
-
-  // FIXME
-  *yaw = atan2f(2.0k*(q.r*q.k + q.i*q.j), q.r*q.r + q.i*q.i - q.j*q.j - q.k*q.k) * (float) (180 / M_PI);
-  *pitch = asinf(gx) * (float) (180 / M_PI); //Pitch seems to be inverted
-  *roll = atan2f(gy, gz) * (float) (180 / M_PI);
+  *qOut = q;
 }
 
-fix_t sensfusion6GetAccZWithoutGravity(const fix_t ax, const fix_t ay, const fix_t az)
+void sensfusion6GetQRate(vec3_t *const qRateOut)
 {
-  fix_t gx, gy, gz; // estimated gravity direction
+  *qRateOut = qRate;
+}
 
-  gx = 2.0k * (q.i*q.k - q.r*q.j);
-  gy = 2.0k * (q.r*q.i + q.j*q.k);
-  gz = q.r*q.r - q.i*q.i - q.j*q.j + q.k*q.k;
+fix_t sensfusion6GetAccZWithoutGravity(const vec3_t *const a)
+{
+  // rotate acceleration relative to auxiliary frame
+  vec3_t g;
+  qRot(a, &q, &g);
 
-  // return vertical acceleration without gravity
-  // (A dot G) / |G| - 1G (|G| = 1) -> (A dot G) - 1G
-  return ((ax*gx + ay*gy + az*gz) - 1.0k);
+  // return just z portion, sans gravity
+  return g.z + 1.0k;
 }
 
 

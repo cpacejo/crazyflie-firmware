@@ -25,6 +25,8 @@
  */
 #include <stdbool.h>
 #include "fix.h"
+#include "vec3.h"
+#include "quaternion.h"
  
 #include "stm32f10x_conf.h"
 #include "FreeRTOS.h"
@@ -55,29 +57,22 @@ int16_t yawOutput;
 
 static bool isInit;
 
-static fix_t limitSlew(const fix_t rate, const fix_t maxRate)
-{
-  if (rate > maxRate) return maxRate;
-  if (rate < -maxRate) return -maxRate;
-  return rate;
-}
-
-void controllerInit(void)
+void controllerInit(const fix_t rateUpdateDt, const fix_t attitudeUpdateDt)
 {
   if(isInit)
     return;
   
   //TODO: get parameters from configuration manager instead
-  pidInit(&pidRollRate, 0, PID_ROLL_RATE_KP, PID_ROLL_RATE_KI, PID_ROLL_RATE_KD, IMU_UPDATE_DT);
-  pidInit(&pidPitchRate, 0, PID_PITCH_RATE_KP, PID_PITCH_RATE_KI, PID_PITCH_RATE_KD, IMU_UPDATE_DT);
-  pidInit(&pidYawRate, 0, PID_YAW_RATE_KP, PID_YAW_RATE_KI, PID_YAW_RATE_KD, IMU_UPDATE_DT);
+  pidInit(&pidRollRate, 0, PID_ROLL_RATE_KP, PID_ROLL_RATE_KI, PID_ROLL_RATE_KD, rateUpdateDt);
+  pidInit(&pidPitchRate, 0, PID_PITCH_RATE_KP, PID_PITCH_RATE_KI, PID_PITCH_RATE_KD, rateUpdateDt);
+  pidInit(&pidYawRate, 0, PID_YAW_RATE_KP, PID_YAW_RATE_KI, PID_YAW_RATE_KD, rateUpdateDt);
   pidSetIntegralLimit(&pidRollRate, PID_ROLL_RATE_INTEGRATION_LIMIT);
   pidSetIntegralLimit(&pidPitchRate, PID_PITCH_RATE_INTEGRATION_LIMIT);
   pidSetIntegralLimit(&pidYawRate, PID_YAW_RATE_INTEGRATION_LIMIT);
 
-  pidInit(&pidRoll, 0, PID_ROLL_KP, PID_ROLL_KI, PID_ROLL_KD, IMU_UPDATE_DT);
-  pidInit(&pidPitch, 0, PID_PITCH_KP, PID_PITCH_KI, PID_PITCH_KD, IMU_UPDATE_DT);
-  pidInit(&pidYaw, 0, PID_YAW_KP, PID_YAW_KI, PID_YAW_KD, IMU_UPDATE_DT);
+  pidInit(&pidRoll, 0, PID_ROLL_KP, PID_ROLL_KI, PID_ROLL_KD, attitudeUpdateDt);
+  pidInit(&pidPitch, 0, PID_PITCH_KP, PID_PITCH_KI, PID_PITCH_KD, attitudeUpdateDt);
+  pidInit(&pidYaw, 0, PID_YAW_KP, PID_YAW_KI, PID_YAW_KD, attitudeUpdateDt);
   pidSetIntegralLimit(&pidRoll, PID_ROLL_INTEGRATION_LIMIT);
   pidSetIntegralLimit(&pidPitch, PID_PITCH_INTEGRATION_LIMIT);
   pidSetIntegralLimit(&pidYaw, PID_YAW_INTEGRATION_LIMIT);
@@ -91,43 +86,48 @@ bool controllerTest(void)
 }
 
 void controllerCorrectRatePID(
-       fix_t rollRateActual, fix_t pitchRateActual, fix_t yawRateActual,
-       fix_t rollRateDesired, fix_t pitchRateDesired, fix_t yawRateDesired)
+       const vec3_t *const qRateActual,
+       const vec3_t *const qRateDesired)
 {
-  pidSetDesired(&pidRollRate, rollRateDesired);
-  pidUpdate(&pidRollRate, rollRateActual, TRUE);
+  pidSetDesired(&pidRollRate, qRateDesired->x);
+  pidUpdate(&pidRollRate, qRateActual->x, true);
   TRUNCATE_SINT16(rollOutput, pidGetOutput(&pidRollRate));
 
-  pidSetDesired(&pidPitchRate, pitchRateDesired);
-  pidUpdate(&pidPitchRate, pitchRateActual, TRUE);
+  pidSetDesired(&pidPitchRate, qRateDesired->y);
+  pidUpdate(&pidPitchRate, qRateActual->y, true);
   TRUNCATE_SINT16(pitchOutput, pidGetOutput(&pidPitchRate));
 
-  pidSetDesired(&pidYawRate, yawRateDesired);
-  pidUpdate(&pidYawRate, yawRateActual, TRUE);
+  pidSetDesired(&pidYawRate, qRateDesired->z);
+  pidUpdate(&pidYawRate, qRateActual->z, true);
   TRUNCATE_SINT16(yawOutput, pidGetOutput(&pidYawRate));
 }
 
 void controllerCorrectAttitudePID(
-       fix_t eulerRollActual, fix_t eulerPitchActual, fix_t eulerYawActual,
-       fix_t eulerRollDesired, fix_t eulerPitchDesired, fix_t eulerYawDesired,
-       fix_t* rollRateDesired, fix_t* pitchRateDesired, fix_t* yawRateDesired)
+       const quaternion_t *const qActual,
+       const quaternion_t *const qDesired,
+       vec3_t *const qRateDesired)
 {
-  // FIXME: do we need to limit slew?
+  quaternion_t qDiff;
+  // qDesired = qActual * qDiff  (qDiff represents local rotation)
+  qConj(qActual, &qDiff);
+  qMul(&qDiff, qDesired, &qDiff);
+  vec3_t qError;
+  qDelta0(&qDiff, 1.0k, &qError);
 
   // Update PID for roll axis
-  pidSetDesired(&pidRoll, eulerRollDesired);
-  pidUpdate360(&pidRoll, eulerRollActual, true);
-  *rollRateDesired = limitSlew(pidGetOutput(&pidRoll), PID_ROLL_MAX_SLEW);
+  pidSetError(&pidRoll, qError.x);
+  pidUpdate(&pidRoll, 0.0k, false);
+  qRateDesired->x = pidGetOutput(&pidRoll);
 
   // Update PID for pitch axis
-  pidSetDesired(&pidPitch, eulerPitchDesired);
-  pidUpdate360(&pidPitch, eulerPitchActual, true);
-  *pitchRateDesired = limitSlew(pidGetOutput(&pidPitch), PID_PITCH_MAX_SLEW);
+  pidSetError(&pidPitch, qError.y);
+  pidUpdate(&pidPitch, 0.0k, false);
+  qRateDesired->y = pidGetOutput(&pidPitch);
 
   // Update PID for yaw axis
-  pidSetDesired(&pidYaw, eulerYawDesired);
-  pidUpdate360(&pidYaw, eulerYawActual, true);
-  *yawRateDesired = limitSlew(pidGetOutput(&pidYaw), PID_YAW_MAX_SLEW);
+  pidSetError(&pidYaw, qError.z);
+  pidUpdate(&pidYaw, 0.0k, false);
+  qRateDesired->z = pidGetOutput(&pidYaw);
 }
 
 void controllerResetAllPID(void)

@@ -49,7 +49,7 @@
  * f0 = fs / 2*pi*attenuation ->
  * attenuation = fs / 2*pi*f0
  */
-#define IMU_ACC_IIR_LPF_ATTENUATION (IMU_UPDATE_FREQ / (2.0k * 3.1415k * IMU_ACC_WANTED_LPF_CUTOFF_HZ))
+#define IMU_ACC_IIR_LPF_ATTENUATION (IMU_UPDATE_FREQ / (2.0k * M_PI_FIX * IMU_ACC_WANTED_LPF_CUTOFF_HZ))
 #define IMU_ACC_IIR_LPF_ATT_FACTOR  (int)(((1.0k<<IIR_SHIFT) / IMU_ACC_IIR_LPF_ATTENUATION) + 0.5k)
 
 void imu6Init(void);

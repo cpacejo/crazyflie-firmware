@@ -538,7 +538,7 @@ fix_t mpu6050GetFullScaleAccelGPL(void)
       range = MPU6050_G_PER_LSB_16;
       break;
     default:
-      range = MPU6050_DEG_PER_LSB_1000;
+      range = MPU6050_G_PER_LSB_8;
       break;
   }
 

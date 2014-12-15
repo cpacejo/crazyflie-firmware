@@ -67,7 +67,7 @@ fix_t vec3Dot(const vec3_t *const x, const vec3_t *const y)
 
 void vec3Cross(const vec3_t *const x, const vec3_t *const y, vec3_t *const out)
 {
-  const fix_t out_x = x->y * y->z - x->z * y->x;
+  const fix_t out_x = x->y * y->z - x->z * y->y;
   const fix_t out_y = x->z * y->x - x->x * y->z;
   const fix_t out_z = x->x * y->y - x->y * y->x;
 
